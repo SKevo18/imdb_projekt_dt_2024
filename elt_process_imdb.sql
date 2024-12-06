@@ -79,8 +79,8 @@ CREATE OR REPLACE FILE FORMAT TSV_FORMAT
     ERROR_ON_COLUMN_COUNT_MISMATCH = TRUE
     NULL_IF = ('\\N');
 
--- load
 CREATE OR REPLACE STAGE HEDGEHOG_IMDB.STAGING.IMDB_STAGE;
+-- extract/nahrat.sh
 LIST @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/;
 /*
 name	                            size	    md5	                                last_modified
