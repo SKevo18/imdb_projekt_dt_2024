@@ -14,10 +14,10 @@ V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024**.
 
 **Entitno-relačný diagram datasetu** s vizualizáciou vzťahov naprieč všetkými súbormi v datasete by v tradičnej entitno-relačnej schéme vyzeral nasledovne:
 
-<p align="center">
+<div align="center">
 <img alt="ERD diagram surových dát" src="original_erd.png"/>
-<b>Obrázok 1:</b> ERD diagram surových dát
-</p>
+<p><b>Obrázok 1:</b> ERD diagram surových dát</p>
+</div>
 
 **Všeobecné vlastnosti datasetov:**
 
@@ -41,10 +41,10 @@ V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024**.
 
 Dáta som transformoval na hviezdicovú schému, ktorá je znázornená nižšie:
 
-<p align="center">
-<img alt="ERD diagram hviezdicovej schémy" src="star_schema.png"/>
-<b>Obrázok 2:</b> ERD diagram hviezdicovej schémy
-</p>
+<div align="center">
+<img alt="ERD diagram hviezdicovej schémy" src="star_schema.png" width="100%"/>
+<p><b>Obrázok 2:</b> ERD diagram hviezdicovej schémy</p>
+</div>
 
 ## Odkazy
 
