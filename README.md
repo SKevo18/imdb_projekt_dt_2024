@@ -121,8 +121,8 @@ FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.basics.tsv.gz
 FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
 /*
-file                            status           rows_parsed rows_loaded error_limit errors_seen first_error                                                  first_error_line  first_error_character   first_error_column_name
-imdb_stage/title.basics.tsv.gz PARTIALLY_LOADED 11286007    11285932    11286007    75          User character length limit (255) exceeded by string '... ' 2613256          18                     "TITLE_BASICS"["PRIMARYTITLE":3]
+file                             status           rows_parsed rows_loaded error_limit errors_seen first_error                                                  first_error_line  first_error_character   first_error_column_name
+imdb_stage/title.basics.tsv.gz  PARTIALLY_LOADED 11286007    11285932    11286007    75          User character length limit (255) exceeded by string '... ' 2613256          18                     "TITLE_BASICS"["PRIMARYTITLE":3]
 */
 ```
 
