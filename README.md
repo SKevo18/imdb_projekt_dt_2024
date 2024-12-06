@@ -12,7 +12,7 @@ Zdrojový dataset pozostáva z TSV (tab-separated-values) súborov, ktoré sú s
 
 <p align="center">
 <img alt="ERD diagram surových dát" src="original_erd.svg" width="100%"/>
-**Obrázok 1:** ERD diagram surových dát
+<b>Obrázok 1:</b> ERD diagram surových dát
 </p>
 
 ## Odkazy
