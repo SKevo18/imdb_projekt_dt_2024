@@ -78,7 +78,7 @@ CREATE OR REPLACE FILE FORMAT TSV_FORMAT
     ERROR_ON_COLUMN_COUNT_MISMATCH = TRUE;
 ```
 
-Dáta sa v surovej podobe musia nahrať do staging arény vyhradenej pre dátový sklad môjho projektu (pomocou skriptu [`extract/nahrat.sh`](./extract/nahrat.sh)). Úspešnosť tohto kroku môžem následne overiť nasledovným SQL dotazom (alebo budem jednoducho sledovať výstup v termináli):
+Dáta sa v surovej podobe musia nahrať do staging arény vyhradenej pre dátový sklad môjho projektu (pomocou skriptu [`extract/nahrat.sh`](./extract/nahrat.sh)). Úspešnosť tohto kroku môžem následne overiť týmto SQL dotazom (alebo budem jednoducho sledovať výstup v termináli):
 
 ```sql
 -- extract/nahrat.sh
