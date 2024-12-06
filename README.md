@@ -11,7 +11,7 @@ Môj projekt sa zameriava na spracovanie [IMDb datasetu](https://developer.imdb.
 Zdrojový dataset pozostáva z TSV (tab-separated-values) súborov, ktoré sú skomprimované algoritmom Gzip. Entitno-relačný diagram datasetu s vizualizáciou vzťahov vyzerá nasledovne:
 
 <p align="center">
-<img alt="ERD diagram surových dát" src="original_erd.svg" width="100%"/>
+<img alt="ERD diagram surových dát" src="original_erd.png"/>
 <b>Obrázok 1:</b> ERD diagram surových dát
 </p>
 
