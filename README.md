@@ -1,6 +1,6 @@
 <!-- markdownlint-disable MD033 -->
 
-# ETL proces pre databázu filmov (IMDb)
+# Spracovanie a analýza databázy filmov IMDb
 
 ## Popis projektu
 
@@ -12,7 +12,7 @@ Platforma IMDb poskytuje časť svojich dát prostredníctvom datasetov pre vere
 
 V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024**.
 
-**Entitno-relačný diagram datasetu** s vizualizáciou vzťahov naprieč všetkými súbormi v datasete vyzerá nasledovne (vytvorené pomocou programu [MySQLWorkbench](https://www.mysql.com/products/workbench/)):
+**Entitno-relačný diagram datasetu** s vizualizáciou vzťahov naprieč všetkými súbormi v datasete by v tradičnej entitno-relačnej schéme vyzeral nasledovne:
 
 <p align="center">
 <img alt="ERD diagram surových dát" src="original_erd.png"/>
@@ -51,6 +51,6 @@ Dáta som transformoval na hviezdicovú schému, ktorá je znázornená nižšie
 - [GitHub repozitár](https://github.com/SKevo18/imdb_projekt_dt_2024)
 - [Zdrojové datasety](https://datasets.imdbws.com/)
 - [Snowflake](https://www.snowflake.com/)
-- [MySQLWorkbench](https://www.mysql.com/products/workbench/)
+- ER diagramy boli vytvorené v programe [MySQLWorkbench](https://www.mysql.com/products/workbench/)
 
 **Autor projektu:** Kevin Svitač, FPVaI UKF 2024
