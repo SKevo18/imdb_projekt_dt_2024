@@ -67,7 +67,7 @@ Avšak, najskôr je potrebné vytvoriť stage, do ktorej nahrám potrebné súbo
 CREATE OR REPLACE STAGE HEDGEHOG_IMDB.STAGING.IMDB_STAGE;
 ```
 
-Počas tohto kroku som hneď vytvoril aj formát, ktorý popisuje moje TSV súbory. Teda, súbory obsahujú jeden riadok ktorý predstavuje hlavičku; hodnoty sú oddelené tabulátorom (čo predstavuje znak `\t`); jednotlivé záznamy sú oddelené novým riadkom (`\n`). Navyše, agument `NULL_IF` hovorí, že ak Snowflake pri spracovaní údajov narazí na pole s hodnotou `\N`, prekonvertuje to na pole s hodnotou `NULL`. Parameter `ERROR_ON_COLUMN_COUNT_MISMATCH` je užitočný, pokiaľ by údaje z nejakého dôvodu nemali konzistentný počet stĺpcov alebo by som urobil chybu a vynechal nejaký stĺpec v tabuľke.
+Počas tohto kroku som hneď vytvoril aj formát, ktorý popisuje moje TSV súbory. Teda, súbory obsahujú jeden riadok ktorý predstavuje hlavičku; hodnoty sú oddelené tabulátorom (čo predstavuje znak `\t`); jednotlivé záznamy sú oddelené novým riadkom (`\n`). Navyše, agument `NULL_IF` hovorí, že ak Snowflake pri spracovaní údajov narazí na pole s hodnotou `\N`, prekonvertuje to na pole s hodnotou `NULL`. Parameter `ERROR_ON_COLUMN_COUNT_MISMATCH` je užitočný, pokiaľ by údaje z nejakého dôvodu nemali konzistentný počet stĺpcov alebo by som urobil chybu a vynechal nejaký stĺpec v tabuľke:
 
 ```sql
 CREATE OR REPLACE FILE FORMAT TSV_FORMAT
