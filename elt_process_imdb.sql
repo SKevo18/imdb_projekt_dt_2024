@@ -21,8 +21,9 @@ CREATE OR REPLACE TABLE staging.title_basics (
 CREATE OR REPLACE TABLE staging.title_akas (
     titleId VARCHAR(15) PRIMARY KEY,
     ordering INTEGER,
-    region VARCHAR(3),
-    language VARCHAR(3),
+    title VARCHAR(255),
+    region VARCHAR(100),
+    language VARCHAR(100),
     types VARCHAR(255),
     attributes VARCHAR(255),
     isOriginalTitle BOOLEAN,
@@ -31,8 +32,8 @@ CREATE OR REPLACE TABLE staging.title_akas (
 
 CREATE OR REPLACE TABLE staging.title_crew (
     tconst VARCHAR(15) PRIMARY KEY,
-    directors VARCHAR(255),
-    writers VARCHAR(255),
+    directors TEXT,
+    writers TEXT,
     FOREIGN KEY (tconst) REFERENCES staging.title_basics(tconst)
 );
 
@@ -92,37 +93,65 @@ imdb_stage/title.episode.tsv.gz	    47741904	614030ad20eaef6c4bcbb9a11b4a5125	Fr
 imdb_stage/title.ratings.tsv.gz	    7583120	    883f2bb5e9ca543a35b4d220f8cb036c-2	Fri, 6 Dec 2024 17:45:16 GMT
 */
 
-COPY INTO HEDGEHOG_IMDB.STAGING.title_akas
-FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.akas.tsv.gz
-FILE_FORMAT = TSV_FORMAT
-ON_ERROR = 'CONTINUE';
-
 COPY INTO HEDGEHOG_IMDB.STAGING.title_basics
 FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.basics.tsv.gz
 FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
+/*
+file	                         status	             rows_parsed rows_loaded error_limit errors_seen first_error	                                              first_error_line	first_error_character	first_error_column_name
+imdb_stage/title.basics.tsv.gz	PARTIALLY_LOADED	11286007	11285932	11286007	75	        User character length limit (255) exceeded by string '... '	2613256	         18	                    "TITLE_BASICS"["PRIMARYTITLE":3]
+*/
+
+COPY INTO HEDGEHOG_IMDB.STAGING.title_akas
+FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.akas.tsv.gz
+FILE_FORMAT = TSV_FORMAT
+ON_ERROR = 'CONTINUE';
+/*
+file	                        status	         rows_parsed rows_loaded error_limit errors_seen first_error	                                                                                                                                                  first_error_line	first_error_character	first_error_column_name
+imdb_stage/title.akas.tsv.gz   PARTIALLY_LOADED	50714199	50713875	50714199	324	        User character length limit (255) exceeded by string 'Vera historia de la primera fundación de Buenos Aires como también de varias navegaciones de muchas p'	397314	         13	                    "TITLE_AKAS"["TITLE":3]
+*/
 
 COPY INTO HEDGEHOG_IMDB.STAGING.title_crew
 FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.crew.tsv.gz
 FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
+/*
+file	status	rows_parsed	rows_loaded	 error_limit errors_seen first_error	first_error_line	first_error_character	first_error_column_name
+imdb_stage/title.crew.tsv.gz	LOADED	10618821	10618821	1	          0				
+*/
 
 COPY INTO HEDGEHOG_IMDB.STAGING.title_episode
 FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.episode.tsv.gz
 FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
+/*
+file	                         status	 rows_parsed rows_loaded	error_limit	errors_seen   first_error   first_error_line   first_error_character   first_error_column_name
+imdb_stage/title.episode.tsv.gz	LOADED	8670360	    8670360	       1	       0				
+*/
 
 COPY INTO HEDGEHOG_IMDB.STAGING.title_principals
 FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.principals.tsv.gz
 FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
+/*
+file	                             status	             rows_parsed rows_loaded error_limit errors_seen first_error	                                                                                                                                                  first_error_line	first_error_character	first_error_column_name
+imdb_stage/title.principals.tsv.gz	PARTIALLY_LOADED	89576330	89576296	89576330	34	        User character length limit (255) exceeded by string '["Self (segment: \"Busted in Washington Square Park\": narrated by Mike Dreyen) (segment: \"The Fens,'	64689006	     31	                    "TITLE_PRINCIPALS"["CHARACTERS":6]
+*/
 
 COPY INTO HEDGEHOG_IMDB.STAGING.title_ratings
 FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.ratings.tsv.gz
 FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
+/*
+file	                         status	 rows_parsed rows_loaded error_limit	errors_seen	first_error	first_error_line	first_error_character	first_error_column_name
+imdb_stage/title.ratings.tsv.gz	LOADED	1507795	    1507795     1	           0				
+*/
 
 COPY INTO HEDGEHOG_IMDB.STAGING.name_basics
 FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/name.basics.tsv.gz
 FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
+/*
+file	                         status	 rows_parsed rows_loaded error_limit	errors_seen	first_error	first_error_line	first_error_character	first_error_column_name
+imdb_stage/name.basics.tsv.gz	LOADED	14001033	14001033	1	           0				
+*/
