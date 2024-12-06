@@ -8,7 +8,7 @@ Môj projekt sa zameriava na spracovanie [IMDb datasetu](https://developer.imdb.
 
 ## Zdrojový dataset
 
-Platforma IMDb poskytuje časť svojich dát prostredníctvom datasetov pre verejnosť alebo akademické účely. Tieto dáta sa denne aktualizujú a najnovšia verzia je dostupná pre stiahnutie [**tu**](https://datasets.imdbws.com/).
+Platforma IMDb poskytuje časť svojich dát prostredníctvom datasetov pre verejnosť alebo akademické účely. Tieto dáta sa denne aktualizujú a najnovšia verzia je dostupná k stiahnutiu [**tu**](https://datasets.imdbws.com/).
 
 V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024**.
 
