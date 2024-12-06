@@ -1,3 +1,4 @@
 # datasety sú príliš veľké, preto ich do repozitára nezahrnem
 # (napokon, sú voľne dostupné: https://datasets.imdbws.com/)
 *tsv.gz
+.DS_Store
