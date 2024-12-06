@@ -8,12 +8,34 @@ Môj projekt sa zameriava na spracovanie [IMDb datasetu](https://developer.imdb.
 
 ## Zdrojový dataset
 
-Zdrojový dataset pozostáva z TSV (tab-separated-values) súborov, ktoré sú skomprimované algoritmom Gzip. Entitno-relačný diagram datasetu s vizualizáciou vzťahov vyzerá nasledovne:
+Platforma IMDb poskytuje časť svojich dát prostredníctvom datasetov pre verejnosť alebo akademické účely. Tieto dáta sa denne aktualizujú a najnovšia verzia je dostupná pre stiahnutie [**tu**](https://datasets.imdbws.com/).
+
+V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024**.
+
+**Entitno-relačný diagram datasetu** s vizualizáciou vzťahov naprieč všetkými súbormi v datasete vyzerá nasledovne:
 
 <p align="center">
 <img alt="ERD diagram surových dát" src="original_erd.png"/>
 <b>Obrázok 1:</b> ERD diagram surových dát
 </p>
+
+**Všeobecné vlastnosti datasetov:**
+
+- Každý dataset je v komprimovanom formáte (gzip) a samotné dáta sú v TSV formáte (kde oddelovače hodnôt predstavujú tabulátory - `\t`);
+- Kódovanie textu je UTF-8;
+- Prvý riadok každého súboru obsahuje hlavičku so zoznamom stĺpcov;
+- Hodnota `\N` predstavuje chýbajúcu alebo neznámu hodnotu (`NULL`);
+- Polia (napr.: `types`, `attributes`) môžu obsahovať jeden alebo viac reťazcov, ktoré sú oddelené čiarkou;
+
+### Súbory a ich význam
+
+- `title.akas.tsv.gz`: obsahuje záznamy o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
+- `title.basics.tsv.gz`: obsahuje základné informácie o každom titule v datasete (titul môže predstavovať napr.: jeden film alebo seriál);
+- `title.crew.tsv.gz`: informácie o filmových a televíznych tvorcoch, konkrétne o režiséroch (`directors`) a scenáristoch (`writers`);
+- `title.episode.tsv.gz`: týka sa epizód seriálov; prepája epizódy (tituly) so seriálom, ktorého sú súčasťou (t. j. s nadradeným titulom);
+- `title.principals.tsv.gz`: informácie o hlavných osobách spojených s titulom (herci, režiséri, kameramani, atď.), pričom uvádza ich roly alebo postavy, ktoré hrali;
+- `title.ratings.tsv.gz`: obsahuje hodnotenia titulov na základe hlasovania používateľov IMDb;
+- `name.basics.tsv.gz`: opisuje jednotlivé osoby (hercov, režisérov, scenáristov, atď.) v databáze;
 
 ## Odkazy
 
