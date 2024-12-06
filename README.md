@@ -12,7 +12,7 @@ Platforma IMDb poskytuje časť svojich dát prostredníctvom datasetov pre vere
 
 V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024**.
 
-**Entitno-relačný diagram datasetu** s vizualizáciou vzťahov naprieč všetkými súbormi v datasete vyzerá nasledovne:
+**Entitno-relačný diagram datasetu** s vizualizáciou vzťahov naprieč všetkými súbormi v datasete vyzerá nasledovne (vytvorené pomocou programu [MySQLWorkbench](https://www.mysql.com/products/workbench/)):
 
 <p align="center">
 <img alt="ERD diagram surových dát" src="original_erd.png"/>
@@ -37,9 +37,20 @@ V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024**.
 - `title.ratings.tsv.gz`: obsahuje hodnotenia titulov na základe hlasovania používateľov IMDb;
 - `name.basics.tsv.gz`: opisuje jednotlivé osoby (hercov, režisérov, scenáristov, atď.) v databáze;
 
+## Hviezdicová schéma
+
+Dáta som transformoval na hviezdicovú schému, ktorá je znázornená nižšie:
+
+<p align="center">
+<img alt="ERD diagram hviezdicovej schémy" src="star_schema.png"/>
+<b>Obrázok 2:</b> ERD diagram hviezdicovej schémy
+</p>
+
 ## Odkazy
 
 - [GitHub repozitár](https://github.com/SKevo18/imdb_projekt_dt_2024)
 - [Zdrojové datasety](https://datasets.imdbws.com/)
+- [Snowflake](https://www.snowflake.com/)
+- [MySQLWorkbench](https://www.mysql.com/products/workbench/)
 
 **Autor projektu:** Kevin Svitač, FPVaI UKF 2024
