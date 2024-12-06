@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD010 MD033 -->
+<!-- markdownlint-disable MD033 -->
 # Spracovanie a analýza databázy filmov IMDb
 
 ## Popis projektu
@@ -84,14 +84,14 @@ Dáta sa v surovej podobe musia nahrať do staging arény vyhradenej pre dátov�
 -- extract/nahrat.sh
 LIST @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/;
 /*
-name	                            size	    md5	                                last_modified
-imdb_stage/title.principals.tsv.gz	693215888	46c6714c64061f82db048802cc754c87-83	Fri, 6 Dec 2024 18:41:11 GMT
-imdb_stage/title.akas.tsv.gz	    438905200	ff6b9daa81caf8618cd45581e8624e22-53	Fri, 6 Dec 2024 18:08:54 GMT
-imdb_stage/name.basics.tsv.gz	    276461856	72c1ac5d83f400ed350e58d7e4136872-33	Fri, 6 Dec 2024 19:08:53 GMT
-imdb_stage/title.basics.tsv.gz	    198383712	9c73dce33351e5499f8d8d220a1028d0	Fri, 6 Dec 2024 18:26:55 GMT
-imdb_stage/title.crew.tsv.gz	    73586400	4bbc9168a71b7e8a70c41731089dc216	Fri, 6 Dec 2024 18:35:54 GMT
-imdb_stage/title.episode.tsv.gz	    47741904	614030ad20eaef6c4bcbb9a11b4a5125	Fri, 6 Dec 2024 18:39:24 GMT
-imdb_stage/title.ratings.tsv.gz	    7583120	    883f2bb5e9ca543a35b4d220f8cb036c-2	Fri, 6 Dec 2024 17:45:16 GMT
+name                                size        md5                                 last_modified
+imdb_stage/title.principals.tsv.gz  693215888   46c6714c64061f82db048802cc754c87-83 Fri, 6 Dec 2024 18:41:11 GMT
+imdb_stage/title.akas.tsv.gz        438905200   ff6b9daa81caf8618cd45581e8624e22-53 Fri, 6 Dec 2024 18:08:54 GMT
+imdb_stage/name.basics.tsv.gz       276461856   72c1ac5d83f400ed350e58d7e4136872-33 Fri, 6 Dec 2024 19:08:53 GMT
+imdb_stage/title.basics.tsv.gz      198383712   9c73dce33351e5499f8d8d220a1028d0    Fri, 6 Dec 2024 18:26:55 GMT
+imdb_stage/title.crew.tsv.gz        73586400    4bbc9168a71b7e8a70c41731089dc216    Fri, 6 Dec 2024 18:35:54 GMT
+imdb_stage/title.episode.tsv.gz     47741904    614030ad20eaef6c4bcbb9a11b4a5125    Fri, 6 Dec 2024 18:39:24 GMT
+imdb_stage/title.ratings.tsv.gz     7583120     883f2bb5e9ca543a35b4d220f8cb036c-2  Fri, 6 Dec 2024 17:45:16 GMT
 */
 ```
 
@@ -121,8 +121,8 @@ FROM @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/title.basics.tsv.gz
 FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
 /*
-file	                         status	             rows_parsed rows_loaded error_limit errors_seen first_error	                                              first_error_line	first_error_character	first_error_column_name
-imdb_stage/title.basics.tsv.gz	PARTIALLY_LOADED	11286007	11285932	11286007	75	        User character length limit (255) exceeded by string '... '	2613256	         18	                    "TITLE_BASICS"["PRIMARYTITLE":3]
+file                            status           rows_parsed rows_loaded error_limit errors_seen first_error                                                  first_error_line  first_error_character   first_error_column_name
+imdb_stage/title.basics.tsv.gz PARTIALLY_LOADED 11286007    11285932    11286007    75          User character length limit (255) exceeded by string '... ' 2613256          18                     "TITLE_BASICS"["PRIMARYTITLE":3]
 */
 ```
 
