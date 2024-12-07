@@ -155,3 +155,77 @@ ON_ERROR = 'CONTINUE';
 file	                         status	 rows_parsed rows_loaded error_limit	errors_seen	first_error	first_error_line	first_error_character	first_error_column_name
 imdb_stage/name.basics.tsv.gz	LOADED	14001033	14001033	1	           0				
 */
+
+-- load - hviezdicova schema
+CREATE SCHEMA IF NOT EXISTS HEDGEHOG_IMDB.star;
+USE SCHEMA HEDGEHOG_IMDB.star;
+
+CREATE OR REPLACE TABLE dim_year AS
+SELECT
+    ROW_NUMBER() OVER (ORDER BY year) AS dim_year_id,
+    TO_DATE(year || '-01-01') AS date,
+    year,
+    -- opravit!
+    year AS decade, --FLOOR(year / 10) * 10 AS decade,
+    CONCAT(year, '. roky') AS decadeStr --CONCAT(FLOOR(year / 10) * 10, '. roky') AS decadeStr
+FROM (
+    SELECT DISTINCT startYear AS year FROM staging.title_basics WHERE startYear IS NOT NULL
+    UNION
+    SELECT DISTINCT endYear AS year FROM staging.title_basics WHERE endYear IS NOT NULL
+)
+ORDER BY year;
+
+CREATE OR REPLACE TABLE dim_titles AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY b.tconst) AS dim_title_id,
+    b.tconst,
+    b.titleType,
+    b.primaryTitle,
+    b.originalTitle,
+    b.genres,
+    CASE
+        WHEN b.isAdult THEN '18+'
+        ELSE 'PG'
+    END AS rating
+FROM staging.title_basics b;
+
+CREATE OR REPLACE TABLE dim_names AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY nb.nconst) AS dim_name_id,
+    nb.nconst,
+    nb.primaryName,
+    CAST(nb.birthYear AS VARCHAR(5)) AS birthYear,
+    CAST(nb.deathYear AS VARCHAR(5)) AS deathYear,
+    nb.primaryProfession,
+    tp.job,
+    tp.characters
+FROM staging.name_basics nb
+LEFT JOIN staging.title_principals tp ON nb.nconst = tp.nconst;
+
+CREATE OR REPLACE TABLE dim_akas AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY a.titleId) AS dim_akas_id,
+    a.titleId,
+    a.title,
+    a.region,
+    a.language,
+    a.types
+FROM staging.title_akas a;
+
+-- opravit!
+CREATE OR REPLACE TABLE fact_titles (
+    fact_title_id INTEGER PRIMARY KEY,
+    averageRating FLOAT,
+    numVotes INTEGER,
+    runtimeMinutes INTEGER,
+    dim_start_year_id INTEGER,
+    dim_end_year_id INTEGER,
+    dim_title_id INTEGER,
+    dim_name_id INTEGER,
+    dim_akas_id INTEGER,
+    FOREIGN KEY (dim_start_year_id) REFERENCES dim_year(dim_year_id),
+    FOREIGN KEY (dim_end_year_id) REFERENCES dim_year(dim_year_id),
+    FOREIGN KEY (dim_title_id) REFERENCES dim_titles(dim_title_id),
+    FOREIGN KEY (dim_name_id) REFERENCES dim_names(dim_name_id),
+    FOREIGN KEY (dim_akas_id) REFERENCES dim_akas(dim_akas_id)
+);
