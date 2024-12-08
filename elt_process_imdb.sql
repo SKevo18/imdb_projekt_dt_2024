@@ -165,9 +165,10 @@ SELECT
     ROW_NUMBER() OVER (ORDER BY year) AS dim_year_id,
     TO_DATE(year || '-01-01') AS date,
     year,
-    -- opravit!
-    year AS decade, --FLOOR(year / 10) * 10 AS decade,
-    CONCAT(year, '. roky') AS decadeStr --CONCAT(FLOOR(year / 10) * 10, '. roky') AS decadeStr
+    FLOOR(year / 10) * 10 % 100 AS decade,
+    CONCAT(FLOOR(year / 10) * 10 % 100, '. roky') AS decadeStr,
+    FLOOR(year / 100) + 1 AS century,
+    CONCAT(FLOOR(year / 100) + 1, '. storočie') AS centuryStr
 FROM (
     SELECT DISTINCT startYear AS year FROM staging.title_basics WHERE startYear IS NOT NULL
     UNION
@@ -196,11 +197,8 @@ SELECT DISTINCT
     nb.primaryName,
     CAST(nb.birthYear AS VARCHAR(5)) AS birthYear,
     CAST(nb.deathYear AS VARCHAR(5)) AS deathYear,
-    nb.primaryProfession,
-    tp.job,
-    tp.characters
-FROM staging.name_basics nb
-LEFT JOIN staging.title_principals tp ON nb.nconst = tp.nconst;
+    nb.primaryProfession
+FROM staging.name_basics nb;
 
 CREATE OR REPLACE TABLE dim_akas AS
 SELECT DISTINCT
@@ -212,20 +210,31 @@ SELECT DISTINCT
     a.types
 FROM staging.title_akas a;
 
--- opravit!
-CREATE OR REPLACE TABLE fact_titles (
-    fact_title_id INTEGER PRIMARY KEY,
-    averageRating FLOAT,
-    numVotes INTEGER,
-    runtimeMinutes INTEGER,
-    dim_start_year_id INTEGER,
-    dim_end_year_id INTEGER,
-    dim_title_id INTEGER,
-    dim_name_id INTEGER,
-    dim_akas_id INTEGER,
-    FOREIGN KEY (dim_start_year_id) REFERENCES dim_year(dim_year_id),
-    FOREIGN KEY (dim_end_year_id) REFERENCES dim_year(dim_year_id),
-    FOREIGN KEY (dim_title_id) REFERENCES dim_titles(dim_title_id),
-    FOREIGN KEY (dim_name_id) REFERENCES dim_names(dim_name_id),
-    FOREIGN KEY (dim_akas_id) REFERENCES dim_akas(dim_akas_id)
-);
+CREATE OR REPLACE TABLE fact_titles AS
+SELECT
+    ROW_NUMBER() OVER (ORDER BY b.tconst) AS fact_title_id,
+    r.averageRating,
+    r.numVotes,
+    b.runtimeMinutes,
+    dy_start.dim_year_id AS dim_start_year_id,
+    dy_end.dim_year_id AS dim_end_year_id,
+    dt.dim_title_id,
+    MAX(dn.dim_name_id) AS dim_name_id,
+    MAX(da.dim_akas_id) AS dim_akas_id
+FROM
+    staging.title_basics b
+LEFT JOIN staging.title_ratings r ON b.tconst = r.tconst
+LEFT JOIN dim_year dy_start ON b.startYear = dy_start.year
+LEFT JOIN dim_year dy_end ON b.endYear = dy_end.year
+LEFT JOIN dim_titles dt ON b.tconst = dt.tconst
+LEFT JOIN staging.title_principals tp ON b.tconst = tp.tconst
+LEFT JOIN dim_names dn ON tp.nconst = dn.nconst
+LEFT JOIN staging.title_akas a ON b.tconst = a.titleId
+LEFT JOIN dim_akas da ON a.titleId = da.titleId
+WHERE
+    r.averageRating IS NOT NULL AND
+    r.numVotes IS NOT NULL AND
+    b.runtimeMinutes IS NOT NULL
+GROUP BY
+    b.tconst, r.averageRating, r.numVotes, b.runtimeMinutes,
+    dy_start.dim_year_id, dy_end.dim_year_id, dt.dim_title_id;
