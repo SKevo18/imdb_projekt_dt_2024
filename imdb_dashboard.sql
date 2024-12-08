@@ -1,4 +1,4 @@
--- Priemerné hodnotenie titulov počas dekád
+-- Priemerné hodnotenie titulov podľa dekád
 SELECT
     AVG(fact_titles.averageRating) AS "Priemerné hodnotenie",
     CONCAT(dim_year.centuryStr, ' ', dim_year.decadeStr) AS "Obdobie"
