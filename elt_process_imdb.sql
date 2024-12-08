@@ -238,3 +238,13 @@ WHERE
 GROUP BY
     b.tconst, r.averageRating, r.numVotes, b.runtimeMinutes,
     dy_start.dim_year_id, dy_end.dim_year_id, dt.dim_title_id;
+
+DROP TABLE staging.title_basics;
+DROP TABLE staging.title_akas;
+DROP TABLE staging.title_crew;
+DROP TABLE staging.title_episode;
+DROP TABLE staging.title_ratings;
+DROP TABLE staging.name_basics;
+DROP TABLE staging.title_principals;
+
+DROP SCHEMA staging;
