@@ -24,3 +24,13 @@ GROUP BY "Názov filmu"
 ORDER BY "Priemerné hodnotenie" DESC
 LIMIT 10;
 
+-- Režiséri s najlepším priemerným hodnotením filmov a počet hlasov
+SELECT
+    dim_names.primaryName AS "Meno režiséra",
+    AVG(fact_titles.averageRating) AS "Priemerné hodnotenie",
+    SUM(fact_titles.numVotes) AS "Celkový počet hlasov" FROM fact_titles
+JOIN dim_names ON fact_titles.dim_name_id = dim_names.dim_name_id
+WHERE dim_names.primaryProfession LIKE '%director%'
+GROUP BY "Meno režiséra"
+ORDER BY "Celkový počet hlasov" DESC, "Priemerné hodnotenie" DESC
+LIMIT 10;
