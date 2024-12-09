@@ -12,10 +12,11 @@ CREATE OR REPLACE TABLE staging.title_basics (
     primaryTitle VARCHAR(255),
     originalTitle VARCHAR(255),
     isAdult BOOLEAN,
-    startYear INTEGER,
-    endYear INTEGER,
+    startYear DATE,
+    endYear DATE,
     runtimeMinutes INTEGER,
-    genres VARCHAR(255)
+    genres VARCHAR(255),
+    lastUpdate TIMESTAMP
 );
 
 CREATE OR REPLACE TABLE staging.title_akas (
@@ -48,8 +49,8 @@ CREATE OR REPLACE TABLE staging.title_episode (
 
 CREATE OR REPLACE TABLE staging.title_ratings (
     tconst VARCHAR(15) PRIMARY KEY,
-    averageRating FLOAT,
-    numVotes INTEGER,
+    rating FLOAT,
+    timestamp TIMESTAMP,
     FOREIGN KEY (tconst) REFERENCES staging.title_basics(tconst)
 );
 
@@ -79,7 +80,7 @@ CREATE OR REPLACE FILE FORMAT TSV_FORMAT
     ERROR_ON_COLUMN_COUNT_MISMATCH = TRUE
     NULL_IF = ('\\N');
 
-CREATE OR REPLACE STAGE HEDGEHOG_IMDB.STAGING.IMDB_STAGE;
+CREATE STAGE IF NOT EXISTS HEDGEHOG_IMDB.STAGING.IMDB_STAGE;
 -- extract/nahrat.sh
 LIST @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/;
 /*
@@ -108,7 +109,7 @@ FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
 /*
 file	                        status	         rows_parsed rows_loaded error_limit errors_seen first_error	                                                                                                                                                  first_error_line	first_error_character	first_error_column_name
-imdb_stage/title.akas.tsv.gz   PARTIALLY_LOADED	50714199	50713875	50714199	324	        User character length limit (255) exceeded by string 'Vera historia de la primera fundación de Buenos Aires como también de varias navegaciones de muchas p'	397314	         13	                    "TITLE_AKAS"["TITLE":3]
+imdb_stage/title.akas.tsv.gz   PARTIALLY_LOADED	50714199	50713875	50714199	324	        User character length limit (255) exceeded by string '...'	397314	         13	                    "TITLE_AKAS"["TITLE":3]
 */
 
 COPY INTO HEDGEHOG_IMDB.STAGING.title_crew
@@ -135,7 +136,7 @@ FILE_FORMAT = TSV_FORMAT
 ON_ERROR = 'CONTINUE';
 /*
 file	                             status	             rows_parsed rows_loaded error_limit errors_seen first_error	                                                                                                                                                  first_error_line	first_error_character	first_error_column_name
-imdb_stage/title.principals.tsv.gz	PARTIALLY_LOADED	89576330	89576296	89576330	34	        User character length limit (255) exceeded by string '["Self (segment: \"Busted in Washington Square Park\": narrated by Mike Dreyen) (segment: \"The Fens,'	64689006	     31	                    "TITLE_PRINCIPALS"["CHARACTERS":6]
+imdb_stage/title.principals.tsv.gz	PARTIALLY_LOADED	89576330	89576296	89576330	34	        User character length limit (255) exceeded by string '["Self (segment: \"...: \"The Fens,'	64689006	     31	                    "TITLE_PRINCIPALS"["CHARACTERS":6]
 */
 
 COPY INTO HEDGEHOG_IMDB.STAGING.title_ratings
@@ -238,13 +239,3 @@ WHERE
 GROUP BY
     b.tconst, r.averageRating, r.numVotes, b.runtimeMinutes,
     dy_start.dim_year_id, dy_end.dim_year_id, dt.dim_title_id;
-
-DROP TABLE staging.title_basics;
-DROP TABLE staging.title_akas;
-DROP TABLE staging.title_crew;
-DROP TABLE staging.title_episode;
-DROP TABLE staging.title_ratings;
-DROP TABLE staging.name_basics;
-DROP TABLE staging.title_principals;
-
-DROP SCHEMA staging;
