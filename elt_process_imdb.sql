@@ -12,8 +12,8 @@ CREATE OR REPLACE TABLE staging.title_basics (
     primaryTitle VARCHAR(255),
     originalTitle VARCHAR(255),
     isAdult BOOLEAN,
-    startYear DATE,
-    endYear DATE,
+    startDate DATE,
+    endDate DATE,
     runtimeMinutes INTEGER,
     genres VARCHAR(255),
     lastUpdate TIMESTAMP
@@ -249,20 +249,27 @@ SELECT DISTINCT
     ROW_NUMBER() OVER (ORDER BY ratings.timestamp) AS fact_rating_id,
     ratings.rating,
     staging.title_basics.runtimeMinutes AS titleRuntimeMinutes,
-    staging.title_basics.startYear AS titleStartYear,
-    staging.title_basics.endYear AS titleEndYear,
-    staging.title_episode.episodeNumber,
-    staging.title_episode.seasonNumber,
+    staging.title_basics.startDate AS titleStartDate,
+    staging.title_basics.endDate AS titleEndDate,
+    CASE 
+        WHEN staging.title_basics.titleType = 'tvEpisode' THEN staging.title_episode.episodeNumber
+        ELSE NULL
+    END AS episodeNumber,
+    CASE 
+        WHEN staging.title_basics.titleType = 'tvEpisode' THEN staging.title_episode.seasonNumber
+        ELSE NULL
+    END AS seasonNumber,
     dim_titles.dim_title_id,
     dim_time.dim_time_id,
     dim_date.dim_date_id
 FROM staging.title_ratings AS ratings
-JOIN staging.title_episode ON ratings.tconst = title_episode.tconst
+LEFT JOIN staging.title_episode ON ratings.tconst = title_episode.tconst
 JOIN staging.title_principals ON ratings.tconst = title_principals.tconst
 JOIN staging.title_basics ON ratings.tconst = staging.title_basics.tconst
 JOIN dim_titles ON ratings.tconst = dim_titles.tconst
 JOIN dim_time ON TO_TIME(ratings.timestamp) = dim_time.time
-JOIN dim_date ON TO_DATE(ratings.timestamp) = dim_date.date;
+JOIN dim_date ON TO_DATE(ratings.timestamp) = dim_date.date
+WHERE staging.title_basics.runtimeMinutes IS NOT NULL;
 
 DROP TABLE IF EXISTS staging.title_basics;
 DROP TABLE IF EXISTS staging.title_akas;
