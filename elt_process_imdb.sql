@@ -162,27 +162,27 @@ CREATE SCHEMA IF NOT EXISTS HEDGEHOG_IMDB.star;
 USE SCHEMA HEDGEHOG_IMDB.star;
 
 CREATE OR REPLACE TABLE dim_date AS
-SELECT DISTINCT
-    ROW_NUMBER() OVER (ORDER BY timestamp) AS dim_date_id,
-    TO_DATE(timestamp) AS date,
-    EXTRACT(DAY FROM timestamp) AS day,
-    EXTRACT(MONTH FROM timestamp) AS month,
-    EXTRACT(YEAR FROM timestamp) AS year,
-    EXTRACT(QUARTER FROM timestamp) AS quarter,
-    FLOOR(year / 10) * 10 % 100 AS decade,
-    FLOOR(year / 100) + 1 AS century,
-    TO_CHAR(timestamp, 'Mon') AS monthStr,
-    CONCAT(FLOOR(year / 10) * 10 % 100, 's') AS decadeStr,
-    CONCAT(FLOOR(year / 100) + 1, '. century') AS centuryStr
-FROM staging.title_ratings;
+SELECT
+    ROW_NUMBER() OVER (ORDER BY date) AS dim_date_id,
+    date,
+    EXTRACT(DAY FROM date) AS day,
+    EXTRACT(MONTH FROM date) AS month,
+    EXTRACT(YEAR FROM date) AS year,
+    EXTRACT(QUARTER FROM date) AS quarter,
+    FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100 AS decade,
+    FLOOR(EXTRACT(YEAR FROM date) / 100) + 1 AS century,
+    TO_CHAR(date, 'Mon') AS monthStr,
+    CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100, 's') AS decadeStr,
+    CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 100) + 1, '. century') AS centuryStr
+FROM (SELECT DISTINCT TO_DATE(timestamp) AS date FROM staging.title_ratings);
 
 CREATE OR REPLACE TABLE dim_time AS
 SELECT DISTINCT
-    ROW_NUMBER() OVER (ORDER BY timestamp) AS dim_time_id,
-    timestamp,
-    EXTRACT(HOUR FROM timestamp) AS hour,
-    EXTRACT(MINUTE FROM timestamp) AS minute
-FROM staging.title_ratings;
+    ROW_NUMBER() OVER (ORDER BY time) AS dim_time_id,
+    time,
+    EXTRACT(HOUR FROM time) AS hour,
+    EXTRACT(MINUTE FROM time) AS minute
+FROM (SELECT DISTINCT TO_TIME(timestamp) AS time FROM staging.title_ratings);
 
 CREATE OR REPLACE TABLE dim_titles AS
 SELECT DISTINCT
@@ -240,16 +240,12 @@ SELECT DISTINCT
     staging.title_episode.episodeNumber,
     staging.title_episode.seasonNumber,
     dim_titles.dim_title_id,
-    dim_names.dim_name_id,
-    dim_akas.dim_akas_id,
     dim_time.dim_time_id,
     dim_date.dim_date_id
-FROM staging.title_ratings ratings
-LEFT JOIN staging.title_episode ON ratings.tconst = title_episode.tconst
-LEFT JOIN staging.title_principals ON ratings.tconst = title_principals.tconst
-LEFT JOIN staging.title_basics ON ratings.tconst = staging.title_basics.tconst
-LEFT JOIN dim_titles ON ratings.tconst = dim_titles.tconst
-LEFT JOIN dim_names ON title_principals.nconst = dim_names.nconst
-LEFT JOIN dim_akas ON ratings.tconst = dim_akas.titleId
-LEFT JOIN dim_time ON ratings.timestamp = dim_time.timestamp
-LEFT JOIN dim_date ON TO_DATE(ratings.timestamp) = dim_date.date;
+FROM staging.title_ratings AS ratings
+JOIN staging.title_episode ON ratings.tconst = title_episode.tconst
+JOIN staging.title_principals ON ratings.tconst = title_principals.tconst
+JOIN staging.title_basics ON ratings.tconst = staging.title_basics.tconst
+JOIN dim_titles ON ratings.tconst = dim_titles.tconst
+JOIN dim_time ON TO_TIME(ratings.timestamp) = dim_time.time
+JOIN dim_date ON TO_DATE(ratings.timestamp) = dim_date.date;
