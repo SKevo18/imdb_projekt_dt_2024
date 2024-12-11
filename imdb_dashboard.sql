@@ -1,36 +1,91 @@
--- Priemerné hodnotenie titulov podľa dekád
+-- Priemerné hodnotenie všetkých titulov podľa roku vydania
 SELECT
-    AVG(fact_titles.averageRating) AS "Priemerné hodnotenie",
-    CONCAT(dim_year.centuryStr, ' ', dim_year.decadeStr) AS "Obdobie"
-FROM fact_titles
-JOIN dim_year ON fact_titles.dim_start_year_id = dim_year.dim_year_id
-JOIN dim_titles ON fact_titles.dim_title_id = dim_titles.dim_title_id
-GROUP BY "Obdobie"
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
+    YEAR(fact_ratings.titleStartDate) AS "Rok vydania titulov"
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_date ON fact_ratings.dim_date_id = dim_date.dim_date_id
+WHERE "Rok vydania titulov" <= 2024
+GROUP BY "Rok vydania titulov"
 ORDER BY "Priemerné hodnotenie" DESC;
 
--- Top 10 filmov v slovenskom znení s aspoň 100 000 hodnoteniami
+-- Aktivita používateľov v priemere počas dňa
+SELECT dim_time.hour AS "Hodina",
+       ROUND(AVG(za_hodinu), 0) AS "Priemerný počet hodnotení"
+FROM (
+    SELECT dim_time.hour, COUNT(fact_ratings.rating) AS za_hodinu
+    FROM fact_ratings
+    JOIN dim_time ON fact_ratings.dim_time_id = dim_time.dim_time_id
+    GROUP BY dim_time.hour, dim_time.minute
+) dim_time
+GROUP BY hour
+ORDER BY hour;
+
+-- Top 50 seriálov v slovenskom znení
 SELECT
-    dim_akas.title AS "Názov filmu",
-    AVG(fact_titles.averageRating) AS "Priemerné hodnotenie",
-FROM fact_titles
-JOIN dim_akas ON fact_titles.dim_akas_id = dim_akas.dim_akas_id
-JOIN dim_titles ON fact_titles.dim_title_id = dim_titles.dim_title_id
+    dim_titles.originalTitle AS "Názov filmu",
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie"
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_akas ON dim_titles.tconst = dim_akas.titleId
 WHERE
-    dim_akas.region IN ('sk', 'SK') AND
-    (SELECT COUNT(*) FROM dim_akas WHERE dim_akas_id = fact_titles.dim_akas_id) <= 1 AND
-    fact_titles.numVotes >= 100000 AND
-    dim_titles.titleType = 'movie'
+    dim_titles.titleType = 'tvSeries' AND
+    dim_akas.region = 'SK' AND
+    dim_akas.title = dim_titles.originalTitle
 GROUP BY "Názov filmu"
 ORDER BY "Priemerné hodnotenie" DESC
-LIMIT 10;
+LIMIT 50;
+
+-- Hodnotenie seriálov s najväčším počtom epizód
+SELECT
+    dim_titles.seriesTitle AS "Názov seriálu",
+    MAX(fact_ratings.episodeNumber) AS "Počet epizód",
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie"
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+WHERE fact_ratings.episodeNumber IS NOT NULL
+GROUP BY "Názov seriálu"
+ORDER BY "Počet epizód" DESC, "Priemerné hodnotenie" DESC
+LIMIT 50;
 
 -- Režiséri s najlepším priemerným hodnotením filmov a počet hlasov
 SELECT
     dim_names.primaryName AS "Meno režiséra",
-    AVG(fact_titles.averageRating) AS "Priemerné hodnotenie",
-    SUM(fact_titles.numVotes) AS "Celkový počet hlasov" FROM fact_titles
-JOIN dim_names ON fact_titles.dim_name_id = dim_names.dim_name_id
-WHERE dim_names.primaryProfession LIKE '%director%'
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
+    COUNT(fact_ratings.rating) AS "Celkový počet hlasov" FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
+JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+WHERE
+    dim_names.primaryProfession LIKE '%director%' AND
+    dim_titles.titleType = 'movie'
 GROUP BY "Meno režiséra"
 ORDER BY "Celkový počet hlasov" DESC, "Priemerné hodnotenie" DESC
 LIMIT 10;
+
+-- Herci hrajúci v najviac filmoch alebo seriáloch
+SELECT
+    dim_names.nconst AS "nconst",
+    dim_names.primaryName AS "Meno",
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie titulov",
+    COUNT(dim_titles.dim_title_id) AS "Počet titulov"
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
+JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+WHERE dim_titles.titleType IN ('movie', 'tvSeries')
+GROUP BY "nconst", "Meno"
+ORDER BY "Počet titulov" DESC
+LIMIT 10;
+
+-- Najdlhší film (v minútach), porovnanie oproti priemernej dĺžke všetkých
+SELECT
+    dim_titles.originalTitle AS "Názov",
+    AVG(fact_ratings.titleRuntimeMinutes) AS "Priemerná dĺžka všetkých",
+    MAX(fact_ratings.titleRuntimeMinutes) AS "Dĺžka v minútach",
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+WHERE dim_titles.titleType = 'movie'
+GROUP BY "Názov"
+ORDER BY "Dĺžka v minútach" DESC
+LIMIT 1;
