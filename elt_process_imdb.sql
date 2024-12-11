@@ -212,14 +212,6 @@ WHERE tb.titleType
     IN ('movie', 'tvSeries') OR
     (tb.titleType = 'tvEpisode' AND te.tconst IS NOT NULL);
 
-CREATE OR REPLACE TABLE title_names AS
-SELECT DISTINCT
-    nb.nconst,
-    TRIM(t.value) AS tconst
-FROM
-    staging.name_basics nb,
-    LATERAL FLATTEN(INPUT => SPLIT(nb.knownForTitles, ',')) t;
-
 CREATE OR REPLACE TABLE dim_names AS
 SELECT DISTINCT
     ROW_NUMBER() OVER (ORDER BY nconst) AS dim_name_id,
@@ -229,6 +221,18 @@ SELECT DISTINCT
     CAST(deathYear AS VARCHAR(5)) AS deathYear,
     primaryProfession
 FROM staging.name_basics;
+
+CREATE OR REPLACE TABLE dim_title_names AS
+SELECT DISTINCT
+    dn.dim_name_id,
+    dt.dim_title_id
+FROM (
+    SELECT nb.nconst, TRIM(title.value) AS tconst
+    FROM staging.name_basics nb,
+         LATERAL FLATTEN(INPUT => SPLIT(nb.knownForTitles, ',')) title
+) par
+JOIN dim_names dn ON dn.nconst = par.nconst
+JOIN dim_titles dt ON dt.tconst = par.tconst;
 
 CREATE OR REPLACE TABLE dim_akas AS
 SELECT DISTINCT
