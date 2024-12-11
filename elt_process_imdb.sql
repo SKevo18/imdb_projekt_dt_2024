@@ -81,7 +81,9 @@ CREATE OR REPLACE FILE FORMAT TSV_FORMAT
     NULL_IF = ('\\N');
 
 CREATE STAGE IF NOT EXISTS HEDGEHOG_IMDB.STAGING.IMDB_STAGE;
--- extract/nahrat.sh
+
+-- extract - použil som vlastný skript: extract/nahrat.sh
+
 LIST @HEDGEHOG_IMDB.STAGING.IMDB_STAGE/;
 /*
 name	                            size	    md5	                                last_modified
@@ -157,7 +159,7 @@ file	                         status	 rows_parsed rows_loaded error_limit	errors
 imdb_stage/name.basics.tsv.gz	LOADED	14001033	14001033	1	           0				
 */
 
--- load - hviezdicova schema
+-- load a transform
 CREATE SCHEMA IF NOT EXISTS HEDGEHOG_IMDB.star;
 USE SCHEMA HEDGEHOG_IMDB.star;
 
@@ -204,11 +206,19 @@ SELECT DISTINCT
         ELSE NULL
     END AS seriesTitle
 FROM staging.title_basics tb
-LEFT JOIN staging.title_episode te ON te.tconst = tb.tconst
-LEFT JOIN staging.title_basics parent_tb ON parent_tb.tconst = te.parentTconst
+JOIN staging.title_episode te ON te.tconst = tb.tconst
+JOIN staging.title_basics parent_tb ON parent_tb.tconst = te.parentTconst
 WHERE tb.titleType
     IN ('movie', 'tvSeries') OR
     (tb.titleType = 'tvEpisode' AND te.tconst IS NOT NULL);
+
+CREATE OR REPLACE TABLE title_names AS
+SELECT DISTINCT
+    nb.nconst,
+    TRIM(t.value) AS tconst
+FROM
+    staging.name_basics nb,
+    LATERAL FLATTEN(INPUT => SPLIT(nb.knownForTitles, ',')) t;
 
 CREATE OR REPLACE TABLE dim_names AS
 SELECT DISTINCT
@@ -249,3 +259,11 @@ JOIN staging.title_basics ON ratings.tconst = staging.title_basics.tconst
 JOIN dim_titles ON ratings.tconst = dim_titles.tconst
 JOIN dim_time ON TO_TIME(ratings.timestamp) = dim_time.time
 JOIN dim_date ON TO_DATE(ratings.timestamp) = dim_date.date;
+
+DROP TABLE IF EXISTS staging.title_basics;
+DROP TABLE IF EXISTS staging.title_akas;
+DROP TABLE IF EXISTS staging.title_crew;
+DROP TABLE IF EXISTS staging.title_episode;
+DROP TABLE IF EXISTS staging.title_principals;
+DROP TABLE IF EXISTS staging.title_ratings;
+DROP TABLE IF EXISTS staging.name_basics;
