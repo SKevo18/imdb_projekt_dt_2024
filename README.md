@@ -1,15 +1,28 @@
 <!-- markdownlint-disable MD033 -->
+
 # Spracovanie a analýza databázy filmov IMDb
 
 ## Popis projektu
 
-Môj projekt sa zameriava na spracovanie [IMDb datasetu](https://developer.imdb.com/non-commercial-datasets/) pomocou ETL procesu v rámci hviezdicovej schémy na platforme [Snowflake](https://www.snowflake.com/).
+Môj projekt sa zameriava na spracovanie oficiálneho [IMDb datasetu](https://developer.imdb.com/non-commercial-datasets/) pomocou ETL procesu v rámci hviezdicovej schémy na platforme [Snowflake](https://www.snowflake.com/).
 
 ## Zdrojový dataset
 
 Platforma IMDb poskytuje časť svojich dát prostredníctvom datasetov pre verejnosť alebo akademické účely. Tieto dáta sa denne aktualizujú a najnovšia verzia je dostupná k stiahnutiu [**tu**](https://datasets.imdbws.com/).
 
 V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024** (veľkosť: ~1.6 GB).
+
+Tento dataset som sa rozhodol použiť z dvoch hlavných dôvodov:
+
+1. Dataset obsahuje skutočné údaje o hodnoteniach jednotlivých filmov a seriálov, tak ako by sme ich videli na oficiálnej stránke IMDb - to mi umožňuje využiť moje vedomosti pre analyzovanie a vizualizáciu skutočných dát;
+2. Dataset je dostatočne veľký a umožňuje vykonávať veľké množstvo užitočných analýz;
+
+Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v tom vykonať plnohodnotnú analýzu v rámci môjho semestrálneho projektu. Rozhodol som sa preto využiť moje nadobudnuté vedomosti z oblasti spracovania dát a pouźiť jazyk Python pre vygenerovanie a doplnenie niektorých kľúčových údajov pre presnejšiu analýzu. Všetky skripty sú dostupné v priečinku [`./py`](./py/):
+
+- [`py/ratings.py`](./py/ratings.py) - upraví dataset `title.ratings.tsv.gz` tak, aby každý titul obsahoval 5 až 10 náhodných hodnotení s náhodnou časovou pečiatkou medzi rokom 2004 a aktuálnym rokom (2024). Keďže som chcel zachovať vierohodnosť dát, naprogramoval som skript tak aby generoval náhodné hodnotenia, ktorých aritmetický priemer sa zhoduje s pôvodným priemerom hodnotenia daného titulu.
+- [`py/titles.py`](./py/titles.py) - pridá do datasetu `title.basics.tsv.gz` nový stĺpec `lastUpdate` ktorý simuluje čas poslednej aktualizácie daného titulu v IMDb databáze. Tento skript taktiež upraví stĺpce `startYear` a `endYear` na náhodné dátumy, namiesto iba čísla roku vydania. Opäť, aby dáta vyzerali realisticky, naprogramoval som skript tak aby rešpektoval dátum vydania titulu (t. j.: titul nemôže byť upravený pred jeho vydaním).
+
+### Entitno-relačný diagram
 
 **Entitno-relačný diagram datasetu** s vizualizáciou vzťahov naprieč všetkými súbormi v datasete by v tradičnej entitno-relačnej schéme vyzeral nasledovne:
 
@@ -18,27 +31,31 @@ V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024** (veľ
 <p><b>Obrázok 1:</b> ERD diagram surových dát</p>
 </div>
 
-**Všeobecné vlastnosti datasetov:**
+### Všeobecné vlastnosti datasetu:
 
-- Každý dataset je v komprimovanom formáte (gzip) a samotné dáta sú v TSV formáte (kde oddelovače hodnôt predstavujú tabulátory - `\t`);
+- Každý TSV súbor je v komprimovanom formáte (gzip);
+- Oddelovače hodnôt predstavujú tabulátory - `\t`;
 - Kódovanie textu je UTF-8;
 - Prvý riadok každého súboru obsahuje hlavičku so zoznamom stĺpcov;
 - Hodnota `\N` predstavuje chýbajúcu alebo neznámu hodnotu (`NULL`);
 - Polia (napr.: `types`, `attributes`) môžu obsahovať jeden alebo viac reťazcov, ktoré sú oddelené čiarkou;
 
-### Súbory a ich význam
+#### Súbory a ich význam
 
-- `title.akas.tsv.gz`: obsahuje záznamy o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
-- `title.basics.tsv.gz`: obsahuje základné informácie o každom titule v datasete (titul môže predstavovať napr.: jeden film alebo seriál);
-- `title.crew.tsv.gz`: informácie o filmových a televíznych tvorcoch, konkrétne o režiséroch (`directors`) a scenáristoch (`writers`);
-- `title.episode.tsv.gz`: týka sa epizód seriálov; prepája epizódy (tituly) so seriálom, ktorého sú súčasťou (t. j. s nadradeným titulom);
-- `title.principals.tsv.gz`: informácie o hlavných osobách spojených s titulom (herci, režiséri, kameramani, atď.), pričom uvádza ich roly alebo postavy, ktoré hrali;
-- `title.ratings.tsv.gz`: obsahuje hodnotenia titulov na základe hlasovania používateľov IMDb;
-- `name.basics.tsv.gz`: opisuje jednotlivé osoby (hercov, režisérov, scenáristov, atď.) v databáze;
+- `title.akas.tsv.gz` (50 miliónov záznamov, 438 MB): obsahuje záznamy o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
+- `title.basics.tsv.gz` (9 miliónov záznamov, 300 MB): obsahuje základné informácie o každom titule v datasete (titul môže predstavovať napr.: jeden film alebo seriál);
+- `title.crew.tsv.gz` (10 miliónov záznamov, 73 MB): informácie o filmových a televíznych tvorcoch, konkrétne o režiséroch (`directors`) a scenáristoch (`writers`);
+- `title.episode.tsv.gz` (47 MB): týka sa epizód seriálov; prepája epizódy (tituly) so seriálom, ktorého sú súčasťou (t. j. s nadradeným titulom);
+- `title.principals.tsv.gz` (90 miliónov záznamov, 693 MB): informácie o hlavných osobách spojených s titulom (herci, režiséri, kameramani, atď.), pričom uvádza ich roly alebo postavy, ktoré hrali;
+- `title.ratings.tsv.gz` (44 MB): obsahuje hodnotenia titulov na základe hlasovania používateľov IMDb;
+- `name.basics.tsv.gz` (276 MB): opisuje jednotlivé osoby (hercov, režisérov, scenáristov, atď.) v databáze;
+
+> [!NOTE]
+> Dôvodom, prečo je veľkosť `title.crew.tsv.gz`  oveľa menšia ako napríklad `title.basics.tsv.gz` napriek porovnateľnému počtu záznamov je ten, že súbor `title.crew.tsv.gz` obsahuje oveľa menej stĺpcov s údajmi.
 
 ## Staging
 
-Úplne nazačiatku som vytvoril novú databázu a dátový sklad:
+Od tejto časti budem popisovať konkrétne kroky ktoré som vykonal pre spracovanie datasetu v Snowflake. V prvom rade som vytvoril novú databázu a dátový sklad pomocou nasledujúcich dotazov:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS HEDGEHOG_IMDB;
@@ -48,18 +65,18 @@ CREATE WAREHOUSE IF NOT EXISTS HEDGEHOG_IMDB_WH;
 USE WAREHOUSE HEDGEHOG_IMDB_WH;
 ```
 
-Nasleduje príkaz pre vytvorenie staging schémy:
+Nasledoval príkaz pre vytvorenie `staging` schémy:
 
 ```sql
 CREATE SCHEMA IF NOT EXISTS HEDGEHOG_IMDB.staging;
 ```
 
-Priečinok [`./extract`](./extract/) obsahuje 2 Bash skripty ktoré som vytvoril pre automatizáciu a zrýchlenie celého procesu:
+Priečinok [`./extract`](./extract/) obsahuje 2 Bash skripty ktoré som vytvoril pre automatizáciu a zrýchlenie celého procesu získavania TSV datasetov zo stránky IMDb:
 
-1. [`stiahnut.sh`](./extract/stiahnut.sh) - stiahne všetky datasety zo stránky IMDb;
-2. [`nahrat.sh`](./extract/nahrat.sh) - spustí SQL súbor [`nahrat.sql`](./extract/nahrat.sql), ktorý nahrá stiahnuté súbory pomocou príkazu `PUT` v [SnowSQL](https://docs.snowflake.com/en/user-guide/snowsql) na server Snowflake.
+1. [`stiahnut.sh`](./extract/stiahnut.sh) - stiahne všetky datasety zo stránky [datasets.imdbws.com](https://datasets.imdbws.com/);
+2. [`nahrat.sh`](./extract/nahrat.sh) - spustí SQL súbor [`nahrat.sql`](./extract/nahrat.sql), ktorý nahrá stiahnuté súbory do mojej Snowflake staging arény pomocou príkazu `PUT` v [SnowSQL](https://docs.snowflake.com/en/user-guide/snowsql) na server Snowflake.
 
-Hlavný dôvod prečo som použil SnowSQL rozhranie je ten, že štandardné webové rozhranie nepodporuje nahrávanie súborov väčších ako 250 MB - v taktom prípade je potrebné použiť práve príkaz `PUT`.
+Hlavný dôvod prečo som použil SnowSQL rozhranie je ten, že štandardné webové rozhranie Snowflake nepodporuje nahrávanie súborov väčších ako 250 MB - v taktom prípade je potrebné použiť práve príkaz `PUT`, ktorý povoľuje nahrávanie oveľa väčších súborov.
 
 Avšak, najskôr je potrebné vytvoriť stage, do ktorej nahrám potrebné súbory:
 
@@ -67,7 +84,15 @@ Avšak, najskôr je potrebné vytvoriť stage, do ktorej nahrám potrebné súbo
 CREATE OR REPLACE STAGE HEDGEHOG_IMDB.STAGING.IMDB_STAGE;
 ```
 
-Počas tohto kroku som hneď vytvoril aj formát, ktorý popisuje moje TSV súbory. Teda, súbory obsahujú jeden riadok ktorý predstavuje hlavičku; hodnoty sú oddelené tabulátorom (čo predstavuje znak `\t`); jednotlivé záznamy sú oddelené novým riadkom (`\n`). Navyše, agument `NULL_IF` hovorí, že ak Snowflake pri spracovaní údajov narazí na pole s hodnotou `\N`, prekonvertuje to na pole s hodnotou `NULL`. Parameter `ERROR_ON_COLUMN_COUNT_MISMATCH` je užitočný, pokiaľ by údaje z nejakého dôvodu nemali konzistentný počet stĺpcov alebo by som urobil chybu a vynechal nejaký stĺpec v tabuľke:
+Počas tohto kroku som hneď vytvoril aj formát, ktorý popisuje moje TSV súbory. Teda:
+
+- súbory obsahujú jeden riadok ktorý predstavuje hlavičku;
+- hodnoty sú oddelené tabulátorom (čo predstavuje znak `\t`);
+- jednotlivé záznamy sú oddelené novým riadkom (`\n`).
+
+Argument `NULL_IF` v dotaze nižšie hovorí, že ak Snowflake pri spracovaní údajov narazí na pole s hodnotou `\N`, prekonvertuje to automaticky na pole s hodnotou `NULL`. Parameter `ERROR_ON_COLUMN_COUNT_MISMATCH` je užitočný, pokiaľ by údaje z nejakého dôvodu nemali konzistentný počet stĺpcov.
+
+Výsledný dotaz pre tvorbu takéhoto formátu je nasledovný:
 
 ```sql
 CREATE OR REPLACE FILE FORMAT TSV_FORMAT
