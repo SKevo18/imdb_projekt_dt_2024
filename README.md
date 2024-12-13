@@ -17,9 +17,9 @@ Tento dataset som sa rozhodol použiť z dvoch hlavných dôvodov:
 1. Dataset obsahuje skutočné údaje o hodnoteniach jednotlivých filmov a seriálov, tak ako by sme ich videli na oficiálnej stránke IMDb - to mi umožňuje využiť moje vedomosti pre analyzovanie a vizualizáciu skutočných dát;
 2. Dataset je dostatočne veľký a umožňuje vykonávať veľké množstvo užitočných analýz;
 
-Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v tom vykonať plnohodnotnú analýzu v rámci môjho semestrálneho projektu. Rozhodol som sa preto využiť moje nadobudnuté vedomosti z oblasti spracovania dát a pouźiť jazyk Python pre vygenerovanie a doplnenie niektorých kľúčových údajov pre presnejšiu analýzu. Všetky skripty sú dostupné v priečinku [`./py`](./py/):
+Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v tom vykonať plnohodnotnú analýzu v rámci môjho semestrálneho projektu. Rozhodol som sa preto využiť moje nadobudnuté vedomosti z oblasti spracovania dát a pouźiť jazyk Python pre vygenerovanie a doplnenie niektorých kľúčových údajov pre spoľahlivú analýzu. Všetky skripty sú dostupné v priečinku [`./py`](./py/):
 
-- [`py/ratings.py`](./py/ratings.py) - upraví dataset `title.ratings.tsv.gz` tak, aby každý titul obsahoval 5 až 10 náhodných hodnotení s náhodnou časovou pečiatkou medzi rokom 2004 a aktuálnym rokom (2024). Keďže som chcel zachovať vierohodnosť dát, naprogramoval som skript tak aby generoval náhodné hodnotenia, ktorých aritmetický priemer sa zhoduje s pôvodným priemerom hodnotenia daného titulu.
+- [`py/ratings.py`](./py/ratings.py) - upraví dataset `title.ratings.tsv.gz` tak, aby každý titul obsahoval 5 až 10 náhodných hodnotení s náhodnou časovou pečiatkou medzi rokom 2004 a aktuálnym rokom (2024). Keďže som chcel zachovať vierohodnosť dát, naprogramoval som skript tak aby generoval náhodné hodnotenia ktorých aritmetický priemer sa zhoduje s pôvodným priemerom hodnotenia daného titulu - to znamená, že ak hodnotenia daného titulu spriemerujeme, dostaneme hodnotu ktorá sa zhoduje s údajom na stránke IMDb;
 - [`py/titles.py`](./py/titles.py) - pridá do datasetu `title.basics.tsv.gz` nový stĺpec `lastUpdate` ktorý simuluje čas poslednej aktualizácie daného titulu v IMDb databáze. Tento skript taktiež upraví stĺpce `startYear` a `endYear` na náhodné dátumy, namiesto iba čísla roku vydania. Opäť, aby dáta vyzerali realisticky, naprogramoval som skript tak aby rešpektoval dátum vydania titulu (t. j.: titul nemôže byť upravený pred jeho vydaním).
 
 ### Entitno-relačný diagram
@@ -31,7 +31,7 @@ Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v 
 <p><b>Obrázok 1:</b> ERD diagram surových dát</p>
 </div>
 
-### Všeobecné vlastnosti datasetu:
+### Všeobecné vlastnosti datasetu
 
 - Každý TSV súbor je v komprimovanom formáte (gzip);
 - Oddelovače hodnôt predstavujú tabulátory - `\t`;
@@ -45,10 +45,10 @@ Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v 
 - `title.akas.tsv.gz` (50 miliónov záznamov, 438 MB): obsahuje záznamy o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
 - `title.basics.tsv.gz` (9 miliónov záznamov, 300 MB): obsahuje základné informácie o každom titule v datasete (titul môže predstavovať napr.: jeden film alebo seriál);
 - `title.crew.tsv.gz` (10 miliónov záznamov, 73 MB): informácie o filmových a televíznych tvorcoch, konkrétne o režiséroch (`directors`) a scenáristoch (`writers`);
-- `title.episode.tsv.gz` (47 MB): týka sa epizód seriálov; prepája epizódy (tituly) so seriálom, ktorého sú súčasťou (t. j. s nadradeným titulom);
+- `title.episode.tsv.gz` (8 miliónov záznamov, 47 MB): týka sa epizód seriálov; prepája epizódy (tituly) so seriálom, ktorého sú súčasťou (t. j. s nadradeným titulom);
 - `title.principals.tsv.gz` (90 miliónov záznamov, 693 MB): informácie o hlavných osobách spojených s titulom (herci, režiséri, kameramani, atď.), pričom uvádza ich roly alebo postavy, ktoré hrali;
-- `title.ratings.tsv.gz` (44 MB): obsahuje hodnotenia titulov na základe hlasovania používateľov IMDb;
-- `name.basics.tsv.gz` (276 MB): opisuje jednotlivé osoby (hercov, režisérov, scenáristov, atď.) v databáze;
+- `title.ratings.tsv.gz` (4 milióny záznamov, 44 MB): obsahuje hodnotenia titulov na základe hlasovania používateľov IMDb;
+- `name.basics.tsv.gz` (14 miliónov záznamov, 276 MB): opisuje jednotlivé osoby (hercov, režisérov, scenáristov, atď.) v databáze;
 
 > [!NOTE]
 > Dôvodom, prečo je veľkosť `title.crew.tsv.gz`  oveľa menšia ako napríklad `title.basics.tsv.gz` napriek porovnateľnému počtu záznamov je ten, že súbor `title.crew.tsv.gz` obsahuje oveľa menej stĺpcov s údajmi.
