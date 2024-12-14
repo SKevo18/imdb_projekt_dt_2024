@@ -168,8 +168,11 @@ Pôvodný dátový model v podobe surových TSV dát som transformoval na hviezd
 </div>
 
 - `fact_ratings` - jedná sa o moju tabuľku faktov, obsahuje informácie o hodnoteniach jednotlivých titulov, teda hlavnú tabuľku ktorú budem skúmať;
-- `dim_date`, `dim_time` - tabuľka dimenzií, ktorá obsahuje informácie o dátume a čase, kedy sa hodnotenie používateľa zaznamenalo;
-
+- `dim_date`, `dim_time` - tabuľka dimenzií, ktorá obsahuje informácie o dátume a čase, kedy sa hodnotenie používateľa zaznamenalo alebo kedy sa vydal nejaký titul;
+- `dim_titles` - tabuľka dimenzií, ktorá obsahuje informácie o tituloch, ktoré sa v datasete nachádzajú;
+- `dim_names` - informácie o menách hercov, režisérov, scenáristov, atď.;
+- `dim_title_names` - prepojenie vzťahom `M:N` medzi tabuľkami `dim_titles` a `dim_names`;
+- `dim_akas` - informácie o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
 
 ## Odkazy
 
