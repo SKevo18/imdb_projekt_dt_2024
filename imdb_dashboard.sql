@@ -1,23 +1,24 @@
 -- Priemerné hodnotenie všetkých titulov podľa roku vydania
 SELECT
     ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
-    YEAR(fact_ratings.titleStartDate) AS "Rok vydania titulov"
+    dim_titleStartDate.year AS "Rok vydania titulov"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_date ON fact_ratings.dim_date_id = dim_date.dim_date_id
+JOIN dim_date dim_postedDate ON fact_ratings.dim_postedDate_id = dim_postedDate.dim_date_id
+JOIN dim_date dim_titleStartDate ON fact_ratings.dim_titleStartDate_id = dim_titleStartDate.dim_date_id
 WHERE "Rok vydania titulov" <= 2024
 GROUP BY "Rok vydania titulov"
 ORDER BY "Priemerné hodnotenie" DESC;
 
 -- Aktivita používateľov v priemere počas dňa
-SELECT dim_time.hour AS "Hodina",
+SELECT dim_postedTime.hour AS "Hodina",
        ROUND(AVG(za_hodinu), 0) AS "Priemerný počet hodnotení"
 FROM (
-    SELECT dim_time.hour, COUNT(fact_ratings.rating) AS za_hodinu
+    SELECT dim_postedTime.hour, COUNT(fact_ratings.rating) AS za_hodinu
     FROM fact_ratings
-    JOIN dim_time ON fact_ratings.dim_time_id = dim_time.dim_time_id
-    GROUP BY dim_time.hour, dim_time.minute
-) dim_time
+    JOIN dim_time dim_postedTime ON fact_ratings.dim_postedTime_id = dim_postedTime.dim_time_id
+    GROUP BY dim_postedTime.hour, dim_postedTime.minute
+) dim_postedTime
 GROUP BY hour
 ORDER BY hour;
 
@@ -48,21 +49,6 @@ GROUP BY "Názov seriálu"
 ORDER BY "Počet epizód" DESC, "Priemerné hodnotenie" DESC
 LIMIT 50;
 
--- Režiséri s najlepším priemerným hodnotením filmov a počet hlasov
-SELECT
-    dim_names.primaryName AS "Meno režiséra",
-    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
-    COUNT(fact_ratings.rating) AS "Celkový počet hlasov" FROM fact_ratings
-JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
-JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
-WHERE
-    dim_names.primaryProfession LIKE '%director%' AND
-    dim_titles.titleType = 'movie'
-GROUP BY "Meno režiséra"
-ORDER BY "Celkový počet hlasov" DESC, "Priemerné hodnotenie" DESC
-LIMIT 10;
-
 -- Herci hrajúci v najviac filmoch alebo seriáloch
 SELECT
     dim_names.nconst AS "nconst",
@@ -89,3 +75,18 @@ WHERE dim_titles.titleType = 'movie'
 GROUP BY "Názov"
 ORDER BY "Dĺžka v minútach" DESC
 LIMIT 1;
+
+-- Režiséri s najlepším priemerným hodnotením filmov a počet hlasov
+SELECT
+    dim_names.primaryName AS "Meno režiséra",
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
+    COUNT(fact_ratings.rating) AS "Celkový počet hlasov" FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
+JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+WHERE
+    dim_names.primaryProfession LIKE '%director%' AND
+    dim_titles.titleType = 'movie'
+GROUP BY "Meno režiséra"
+ORDER BY "Celkový počet hlasov" DESC, "Priemerné hodnotenie" DESC
+LIMIT 10;
