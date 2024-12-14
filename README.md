@@ -43,7 +43,7 @@ Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v 
 #### Súbory a ich význam
 
 - `title.akas.tsv.gz` (50 miliónov záznamov, 438 MB): obsahuje záznamy o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
-- `title.basics.tsv.gz` (9 miliónov záznamov, 300 MB): obsahuje základné informácie o každom titule v datasete (titul môže predstavovať napr.: jeden film alebo seriál);
+- `title.basics.tsv.gz` (11 miliónov záznamov, 300 MB): obsahuje základné informácie o každom titule v datasete (titul môže predstavovať napr.: jeden film alebo seriál);
 - `title.crew.tsv.gz` (10 miliónov záznamov, 73 MB): informácie o filmových a televíznych tvorcoch, konkrétne o režiséroch (`directors`) a scenáristoch (`writers`);
 - `title.episode.tsv.gz` (8 miliónov záznamov, 47 MB): týka sa epizód seriálov; prepája epizódy (tituly) so seriálom, ktorého sú súčasťou (t. j. s nadradeným titulom);
 - `title.principals.tsv.gz` (90 miliónov záznamov, 693 MB): informácie o hlavných osobách spojených s titulom (herci, režiséri, kameramani, atď.), pričom uvádza ich roly alebo postavy, ktoré hrali;
@@ -103,7 +103,7 @@ CREATE OR REPLACE FILE FORMAT TSV_FORMAT
     ERROR_ON_COLUMN_COUNT_MISMATCH = TRUE;
 ```
 
-Dáta sa v surovej podobe musia nahrať do staging arény vyhradenej pre dátový sklad môjho projektu (pomocou skriptu [`extract/nahrat.sh`](./extract/nahrat.sh)). Úspešnosť tohto kroku môžem následne overiť týmto SQL dotazom (alebo budem jednoducho sledovať výstup v termináli):
+Dáta sa v surovej podobe musia nahrať do staging arény vyhradenej pre dátový sklad môjho projektu (pomocou skriptu [`extract/nahrat.sh`](./extract/nahrat.sh)). Úspešnosť tohto kroku môžem následne overiť týmto SQL dotazom (alebo budem jednoducho sledovať výstup v termináli, ktorý bude generovať príkaz `PUT` potom, ako sa súbor nahrá na AWS server Snowflake):
 
 ```sql
 -- extract/nahrat.sh
@@ -151,21 +151,25 @@ imdb_stage/title.basics.tsv.gz  PARTIALLY_LOADED 11286007    11285932    1128600
 */
 ```
 
-Z výstupu vyššie môžem vidieť, že sa úspešne načítalo 11 286 007 záznamov, ale vyskytlo sa aj 75 chýb pri konverzii údajov na formu ktorá zodpovedá schéme mojej Snowflake staging tabuľky.
+Z výstupu vyššie môžem vidieť, že sa úspešne načítalo približne 11 miliónov záznamov, ale vyskytlo sa aj 75 chýb pri konverzii údajov na formu ktorá zodpovedá schéme mojej Snowflake staging tabuľky.
 
-Vyriešil som to príkazom `ON_ERROR = 'CONTINUE'`, čím zabezpečím to, že Snowflake bude v importovaní pokračovať aj vtedy, ak narazí na chybu. Napríklad, vyššie uvedený výstup hovorí, že Snowflake preskočil 75 záznamov. Je to z toho dôvodu, že tento riadok obsahoval pole, ktorého dĺžka presahovala veľkosť 255 (čo zodpovedá definícií pre `VARCHAR(255)` v mojej tabuľke).
-Pomer takto "chybných" záznamov voči celkovému počtu je zanedbateľný a neskreslí moju analýzu žiadnym výrazným spôsobom. Taktiež sa chcem vyhnúť zbytočnému používaniu stĺpcov s typom `TEXT` - z toho dôvodou tieto hodnoty nebudem opravovať, iba ich import jednoducho preskočím.
+Vyriešil som to príkazom `ON_ERROR = 'CONTINUE'`, čím zabezpečím to, že Snowflake bude v importovaní pokračovať aj vtedy, ak narazí na chybu. Napríklad, vyššie uvedený výstup hovorí, že prvý riadok kde sa vyskytla chyba obsahoval pole, ktorého dĺžka presahovala veľkosť 255 (čo v mojej tabuľke predstavuje stĺpec s `VARCHAR(255)`).
+Pomer takto "chybných" záznamov voči celkovému počtu je zanedbateľný a neskreslí moju analýzu žiadnym výrazným spôsobom - z tohto dôvodu tieto hodnoty nebudem opravovať, iba ich import jednoducho preskočím.
 
-Keďže predvolená možnosť pre parameter `COMPRESSION` v mojom `TSV_FORMAT` formáte je `'AUTO'`, Snowflake automaticky rozpozná že sa jedná o gzip súbory ktoré musí pred skopírovaním do tabulky dekomprimovať. Teda, nemusím nahrávať vopred dekomprimované dáta ktoré by zaberali oveľa viacej úložného priestoru.
+Keďže predvolená možnosť pre parameter `COMPRESSION` v mojom `TSV_FORMAT` formáte je `'AUTO'`, Snowflake automaticky rozpozná že sa jedná o gzip súbory ktoré musí pred skopírovaním do tabulky dekomprimovať. Teda, nemusím nahrávať vopred dekomprimované dáta ktoré by zaberali oveľa viacej úložného priestoru a nahrávali by sa dlhšie.
 
 ## Hviezdicová schéma
 
-Dáta som transformoval na hviezdicovú schému, ktorá je znázornená nižšie:
+Pôvodný dátový model v podobe surových TSV dát som transformoval na hviezdicovú schému, ktorá je znázornená nižšie:
 
 <div align="center">
 <img alt="ERD diagram hviezdicovej schémy" src="star_schema.png" width="100%"/>
 <p><b>Obrázok 2:</b> ERD diagram hviezdicovej schémy</p>
 </div>
+
+- `fact_ratings` - jedná sa o moju tabuľku faktov, obsahuje informácie o hodnoteniach jednotlivých titulov, teda hlavnú tabuľku ktorú budem skúmať;
+- `dim_date`, `dim_time` - tabuľka dimenzií, ktorá obsahuje informácie o dátume a čase, kedy sa hodnotenie používateľa zaznamenalo;
+
 
 ## Odkazy
 

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from random import randint
 from pathlib import Path
 from datetime import datetime
