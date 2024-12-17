@@ -27,8 +27,8 @@ Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v 
 **Entitno-relačný diagram datasetu** s vizualizáciou vzťahov naprieč všetkými súbormi v datasete by v tradičnej entitno-relačnej schéme vyzeral nasledovne:
 
 <div align="center">
-<img alt="ERD diagram surových dát" src="original_erd.png"/>
-<p><b>Obrázok 1:</b> ERD diagram surových dát</p>
+<img alt="ERD diagram surových dát" src="obrazky/original_erd.png" width="100%"/>
+<p><b>Obrázok 1:</b> <a href="ostatne/original_erd.mwb">ERD diagram</a> surových dát</p>
 </div>
 
 ### Všeobecné vlastnosti datasetu
@@ -163,8 +163,8 @@ Keďže predvolená možnosť pre parameter `COMPRESSION` v mojom `TSV_FORMAT` f
 Pôvodný dátový model v podobe surových TSV dát som transformoval na hviezdicovú schému, ktorá je znázornená nižšie:
 
 <div align="center">
-<img alt="ERD diagram hviezdicovej schémy" src="star_schema.png" width="100%"/>
-<p><b>Obrázok 2:</b> ERD diagram hviezdicovej schémy</p>
+<img alt="ERD diagram hviezdicovej schémy" src="obrazky/star_schema.png" width="100%"/>
+<p><b>Obrázok 2:</b> <a href="ostatne/star_schema.mwb">ERD diagram</a> hviezdicovej schémy</p>
 </div>
 
 - `fact_ratings` - jedná sa o moju tabuľku faktov, obsahuje informácie o hodnoteniach jednotlivých titulov, teda hlavnú tabuľku ktorú budem skúmať;
