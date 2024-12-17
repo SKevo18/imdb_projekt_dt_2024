@@ -14,13 +14,13 @@ V rámci môjho projektu analyzujem verziu datasetu k **6. decembru 2024** (veľ
 
 Tento dataset som sa rozhodol použiť z dvoch hlavných dôvodov:
 
-1. Dataset obsahuje skutočné údaje o hodnoteniach jednotlivých filmov a seriálov, tak ako by sme ich videli na oficiálnej stránke IMDb - to mi umožňuje využiť moje vedomosti pre analyzovanie a vizualizáciu skutočných dát;
+1. Dataset obsahuje skutočné údaje o hodnoteniach jednotlivých filmov a seriálov, tak ako by sme ich videli na oficiálnej stránke IMDb. Chcem získať praktické zručnosti v oblasti spracovania dát a zamerať sa na analýzu skutočných dát, preto som sa rozhodol použiť tento dataset namiesto plne generovaných dát alebo menších datasetov;
 2. Dataset je dostatočne veľký a umožňuje vykonávať veľké množstvo užitočných analýz;
 
-Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v tom vykonať plnohodnotnú analýzu v rámci môjho semestrálneho projektu. Rozhodol som sa preto využiť moje nadobudnuté vedomosti z oblasti spracovania dát a pouźiť jazyk Python pre vygenerovanie a doplnenie niektorých kľúčových údajov pre spoľahlivú analýzu. Všetky skripty sú dostupné v priečinku [`./py`](./py/):
+Avšak, napriek tomu mal tento dataset niekoľko nevýhod - hlavnou bola absencia údajov v čase. Rozhodol som sa preto pouźiť jazyk Python pre vygenerovanie a doplnenie niektorých kľúčových údajov pre simulovanie plnohodnotnej analýzy. Všetky skripty ktoré som použil sú dostupné v priečinku [`./py`](./py/):
 
-- [`py/ratings.py`](./py/ratings.py) - upraví dataset `title.ratings.tsv.gz` tak, aby každý titul obsahoval 5 až 10 náhodných hodnotení s náhodnou časovou pečiatkou medzi rokom 2004 a aktuálnym rokom (2024). Keďže som chcel zachovať vierohodnosť dát, naprogramoval som skript tak aby generoval náhodné hodnotenia ktorých aritmetický priemer sa zhoduje s pôvodným priemerom hodnotenia daného titulu - to znamená, že ak hodnotenia daného titulu spriemerujeme, dostaneme hodnotu ktorá sa zhoduje s údajom na stránke IMDb;
-- [`py/titles.py`](./py/titles.py) - pridá do datasetu `title.basics.tsv.gz` nový stĺpec `lastUpdate` ktorý simuluje čas poslednej aktualizácie daného titulu v IMDb databáze. Tento skript taktiež upraví stĺpce `startYear` a `endYear` na náhodné dátumy, namiesto iba čísla roku vydania. Opäť, aby dáta vyzerali realisticky, naprogramoval som skript tak aby rešpektoval dátum vydania titulu (t. j.: titul nemôže byť upravený pred jeho vydaním).
+- [`py/ratings.py`](./py/ratings.py) - upraví dataset `title.ratings.tsv.gz` tak, aby každý titul obsahoval 5 až 10 náhodných hodnotení s náhodnou časovou pečiatkou medzi rokom 2004 a aktuálnym rokom (2024). Keďže som chcel zachovať vierohodnosť dát, naprogramoval som skript tak aby generoval náhodné hodnotenia ktorých aritmetický priemer sa zhoduje s pôvodným priemerom hodnotenia daného titulu - to znamená, že ak hodnotenia daného titulu spriemerujem po vygenerovaní náhodných hodnotení, dostanem priemer ktorý sa zhoduje s pôvodným údajom na stránke IMDb;
+- [`py/titles.py`](./py/titles.py) - pridá do datasetu `title.basics.tsv.gz` nový stĺpec `lastUpdate` ktorý simuluje čas poslednej aktualizácie daného titulu v IMDb databáze. Tento skript taktiež upraví stĺpce `startYear` a `endYear` na náhodné dátumy, namiesto iba čísla roku vydania. Opäť, aby dáta vyzerali realisticky, naprogramoval som skript tak aby rešpektoval dátum vydania titulu (napr.: titul nemôže byť upravený pred jeho vydaním, a podobne).
 
 ### Entitno-relačný diagram
 
@@ -55,7 +55,7 @@ Avšak, napriek tomu mal tento dataset niekoľko nevýhod, ktoré mi bránili v 
 
 ## Staging
 
-Od tejto časti budem popisovať konkrétne kroky ktoré som vykonal pre spracovanie datasetu v Snowflake. V prvom rade som vytvoril novú databázu a dátový sklad pomocou nasledujúcich dotazov:
+Od tejto časti budem popisovať konkrétne kroky ktoré som vykonal pre spracovanie datasetu v Snowflake. V prvom rade som vytvoril novú databázu a dátový sklad pomocou nasledovných dotazov:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS HEDGEHOG_IMDB;
@@ -81,7 +81,7 @@ Hlavný dôvod prečo som použil SnowSQL rozhranie je ten, že štandardné web
 Avšak, najskôr je potrebné vytvoriť stage, do ktorej nahrám potrebné súbory:
 
 ```sql
-CREATE OR REPLACE STAGE HEDGEHOG_IMDB.STAGING.IMDB_STAGE;
+CREATE STAGE IF NOT EXISTS HEDGEHOG_IMDB.STAGING.IMDB_STAGE;
 ```
 
 Počas tohto kroku som hneď vytvoril aj formát, ktorý popisuje moje TSV súbory. Teda:
@@ -173,6 +173,173 @@ Pôvodný dátový model v podobe surových TSV dát som transformoval na hviezd
 - `dim_names` - informácie o menách hercov, režisérov, scenáristov, atď.;
 - `dim_title_names` - prepojenie vzťahom `M:N` medzi tabuľkami `dim_titles` a `dim_names`;
 - `dim_akas` - informácie o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
+
+## Vizualizácia
+
+Kompletná snímka dashboardu je dostupná v súbore [./obrazky/dashboard.png](./obrazky/dashboard.png) ([PDF](./ostatne/dashboard.pdf)).
+
+### Priemerné hodnotenie všetkých titulov podľa roku vydania
+
+![Priemerné hodnotenie všetkých titulov podľa roku vydania](obrazky/1.png)
+
+Graf zobrazuje priemerné hodnotenia (zaokrúhlené na 2 desatinné miesta) všetkých titulov v databáze podľa roku vydania daného titulu. Môžeme napríklad vidieť, že začiatkom 20. storočia je divákmi hodnotených iba veľmi málo filmov a aj samotný počet filmov je oveľa menší. No ako sa približujeme k roku 2024, vidíme že počet filmov, ich hodnotení (a aj spokojnosť divákov) sa zvyšuje. Najlepšie hodnotené filmy boli filmy vydané v roku 2015 (`7.03`), najhoršie filmy sú z roku 1899 (`3.9`).
+
+SQL dotaz pre vygenerovanie grafu:
+
+```sql
+SELECT
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
+    dim_titleStartDate.year AS "Rok vydania titulov"
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_date dim_postedDate ON fact_ratings.dim_postedDate_id = dim_postedDate.dim_date_id
+JOIN dim_date dim_titleStartDate ON fact_ratings.dim_titleStartDate_id = dim_titleStartDate.dim_date_id
+WHERE "Rok vydania titulov" <= 2024
+GROUP BY "Rok vydania titulov"
+ORDER BY "Priemerné hodnotenie" DESC;
+```
+
+### Aktivita používateľov v priemere počas dňa
+
+![Aktivita používateľov v priemere počas dňa](obrazky/2.png)
+
+Vyššie je zobrazená priemerná aktivita používateľov počas dňa, resp. ktoré hodiny bolo v priemere zverejnených najviac hodnotení titulov. Priemer pre jednu hodinu sa počíta z počtu hodnotení zverejnených počas každej minúty v danú hodinu. Následne sa vytvorí graf z priemerov všetkých hodín. Keďže tieto časové údaje boli doplnené automatickým skriptom, nie sú presné a neodrážajú skutočný stav na oficiálnej stránke IMDb.
+
+SQL dotaz pre vygenerovanie grafu:
+
+```sql
+SELECT dim_postedTime.hour AS "Hodina",
+       ROUND(AVG(za_hodinu), 0) AS "Priemerný počet hodnotení"
+FROM (
+    SELECT dim_postedTime.hour, COUNT(fact_ratings.rating) AS za_hodinu
+    FROM fact_ratings
+    JOIN dim_time dim_postedTime ON fact_ratings.dim_postedTime_id = dim_postedTime.dim_time_id
+    GROUP BY dim_postedTime.hour, dim_postedTime.minute
+) dim_postedTime
+GROUP BY hour
+ORDER BY hour;
+```
+
+### Top 50 seriálov v slovenskom znení
+
+![Top 50 seriálov v slovenskom znení](obrazky/3.png)
+
+Pôvodný zámer bol zostaviť rebríček "Top 50-tich originálnych slovenských titulov". Bohužiaľ, v datasete sa nenachádza informácia o krajine pôvodu jednotlivých titlov. Alternatívou bolo porovnať originálny názov titulu s alternatívnym (preloženým do iného jazyka), a vybrať všetky tie tituly, kde názov v slovenčine je zhodný s originálnym názvom (teda, je predpoklad že titul je originálom v slovenčine). Avšak, aj tu vznikol problém, konkrétne s titulmi ktoré sa neprekladajú z pôvodného názvu do slovenského (napr. "Star Trek").
+
+Napriek tomu sa mi pomocou dodatočných filtrov podarilo zostaviť rebríček, kde sa nachádzajú zväčša slovenské seriály. Môžeme napríklad vidieť, že najlepšie hodnoteným slovenským seriálom je "Za sklom" s priemerným hodnotením `7.9`. Nasledujú tituly "Milujem Slovensko" (`7.8`), "Milenky" (7.7) a "Uragán" (`7.7`). Naopak, najhoršie hodnotené slovenské seriály (z "Top 50") sú "Rodinné prípady" (`5.4`).
+
+SQL dotaz pre vygenerovanie grafu:
+
+```sql
+SELECT
+    dim_titles.originalTitle AS "Názov filmu",
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie"
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_akas ON dim_titles.tconst = dim_akas.titleId
+WHERE
+    dim_titles.titleType = 'tvSeries' AND
+    dim_akas.region = 'SK' AND
+    dim_akas.title = dim_titles.originalTitle
+GROUP BY "Názov filmu"
+ORDER BY "Priemerné hodnotenie" DESC
+LIMIT 50;
+```
+
+### Hodnotenie seriálov s najväčším počtom epizód
+
+![Hodnotenie seriálov s najväčším počtom epizód](obrazky/4.png)
+
+V tomto bode mojej analýzy ma zaujímalo, ktoré seriály (z celého sveta) majú najväčší počet epizód? A aby to bolo zaujímavé, zobrazil som si aj ich priemerné hodnotenie. Výsledný graf hovorí, že seriál s najväčším počtom epizód je "The Guiding Light" s `15 762` epizódami a priemerným hodnotením `7.7`. Rýchle vyhľadanie na internete potvrdzuje, že tento seriál je skutočne z jedných ktoré majú najväčší počtet epizód (jedná sa dokonca o [najdlšie bežiacu televíznu drámu v americkej histórii](https://cs.wikipedia.org/wiki/U_n%C3%A1s_ve_Springfieldu)).
+
+SQL dotaz pre vygenerovanie grafu:
+
+```sql
+SELECT
+    dim_titles.seriesTitle AS "Názov seriálu",
+    MAX(fact_ratings.episodeNumber) AS "Počet epizód",
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie"
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+WHERE fact_ratings.episodeNumber IS NOT NULL
+GROUP BY "Názov seriálu"
+ORDER BY "Počet epizód" DESC, "Priemerné hodnotenie" DESC
+LIMIT 50;
+```
+
+### Herci hrajúci v najviac filmoch
+
+![Herci hrajúci v najviac filmoch](obrazky/5.png)
+
+Podobne je dosť zaujímavé analyzovať, ktorí herci hrajú v najviac tituloch. Hercom s najväčším počtom titulov je "Kyôko Yamada" (`nm0945238`) s `1490` titulmi, ktoré majú priemerné hodnotenie `6.03`.
+
+> [!NOTE]
+> Do tejto analýzy som zahrnul iba filmy, pretože seriály obsahujú veľký počet epizód kde môže hrať ten istý herec.
+
+SQL dotaz pre vygenerovanie grafu:
+
+```sql
+SELECT
+    dim_names.nconst AS "nconst",
+    dim_names.primaryName AS "Meno",
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie titulov",
+    COUNT(dim_titles.dim_title_id) AS "Počet titulov"
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
+JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+WHERE
+    dim_titles.titleType = 'movie' AND
+    dim_names.primaryProfession IN ('actor', 'actress')
+GROUP BY "nconst", "Meno"
+ORDER BY "Počet titulov" DESC
+LIMIT 10;
+```
+
+### Najdlhší film (v minútach) + porovnanie oproti priemernej dĺžke všetkých
+
+![Najdlhší film (v minútach) + porovnanie oproti priemernej dĺžke všetkých](obrazky/6.png)
+
+Do tretice, aký je film s najväčšou dĺžkou? Podľa karty vyššie je to film s názvom "100" a dĺžkou `59 460` minút (jedná sa o najdlhší film evidovaný v [IMDb](https://www.imdb.com/title/tt29302558/) a [trailer](https://www.youtube.com/watch?v=1yIE3tyuPz4) má 1 hodinu a 16 minút. Priemerná dĺžka všetkých titulov je `5758.27` minút, čo znamená že tento titul je o `933 %` dlhší ako priemerný titul v databáze. Je to amatérsky film bez zápletky, vytvorený iba za účelom toho aby bol najdlhší v IMDb a nič iné).
+
+SQL dotaz pre vygenerovanie grafu:
+
+```sql
+SELECT
+    dim_titles.originalTitle AS "Názov",
+    AVG(fact_ratings.titleRuntimeMinutes) AS "Priemerná dĺžka všetkých",
+    MAX(fact_ratings.titleRuntimeMinutes) AS "Dĺžka v minútach",
+FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+WHERE dim_titles.titleType = 'movie'
+GROUP BY "Názov"
+ORDER BY "Dĺžka v minútach" DESC
+LIMIT 1;
+```
+
+### Režiséri s najlepším priemerným hodnotením filmov a počet hlasov
+
+![Režiséri s najlepším priemerným hodnotením filmov a počet hlasov](obrazky/7.png)
+
+Graf zobrazuje režisérov filmov, ktorý majú najväčší počet hlasov a zároveň majú ich filmy najlepšie hodnotenie. Víťazom v tomto rebríčku je režisér "Manpreet Singh" s počtom hlasov `5 030` a priemerným hodnotením `6.55`.
+
+SQL dotaz pre vygenerovanie grafu:
+
+```sql
+SELECT
+    dim_names.primaryName AS "Meno režiséra",
+    ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
+    COUNT(fact_ratings.rating) AS "Celkový počet hlasov" FROM fact_ratings
+JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
+JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
+JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+WHERE
+    dim_names.primaryProfession LIKE '%director%' AND
+    dim_titles.titleType = 'movie'
+GROUP BY "Meno režiséra"
+ORDER BY "Celkový počet hlasov" DESC, "Priemerné hodnotenie" DESC
+LIMIT 10;
+```
 
 ## Odkazy
 

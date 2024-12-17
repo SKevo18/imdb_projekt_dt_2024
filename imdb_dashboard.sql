@@ -49,7 +49,7 @@ GROUP BY "Názov seriálu"
 ORDER BY "Počet epizód" DESC, "Priemerné hodnotenie" DESC
 LIMIT 50;
 
--- Herci hrajúci v najviac filmoch alebo seriáloch
+-- Herci hrajúci v najviac filmoch
 SELECT
     dim_names.nconst AS "nconst",
     dim_names.primaryName AS "Meno",
@@ -59,7 +59,9 @@ FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
 JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
 JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
-WHERE dim_titles.titleType IN ('movie', 'tvSeries')
+WHERE
+    dim_titles.titleType = 'movie' AND
+    dim_names.primaryProfession IN ('actor', 'actress')
 GROUP BY "nconst", "Meno"
 ORDER BY "Počet titulov" DESC
 LIMIT 10;
