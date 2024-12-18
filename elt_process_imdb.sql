@@ -186,11 +186,11 @@ FROM (
 
 CREATE OR REPLACE TABLE dim_time AS
 SELECT DISTINCT
-    ROW_NUMBER() OVER (ORDER BY time) AS dim_time_id,
-    time,
-    EXTRACT(HOUR FROM time) AS hour,
-    EXTRACT(MINUTE FROM time) AS minute
-FROM (SELECT DISTINCT TO_TIME(timestamp) AS time FROM staging.title_ratings);
+    ROW_NUMBER() OVER (ORDER BY timestamp) AS dim_time_id,
+    TO_TIME(timestamp) AS time,
+    EXTRACT(HOUR FROM timestamp) AS hour,
+    EXTRACT(MINUTE FROM timestamp) AS minute
+FROM staging.title_ratings;
 
 CREATE OR REPLACE TABLE dim_titles AS
 SELECT DISTINCT

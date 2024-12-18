@@ -42,7 +42,7 @@ Avšak, napriek tomu mal tento dataset niekoľko nevýhod - hlavnou bola absenci
 
 #### Súbory a ich význam
 
-- `title.akas.tsv.gz` (50 miliónov záznamov, 438 MB): obsahuje záznamy o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
+- `title.akas.tsv.gz` (50 miliónov záznamov, 438 MB): obsahuje záznamy o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov - AKAs (*Also-Known-As*);
 - `title.basics.tsv.gz` (11 miliónov záznamov, 300 MB): obsahuje základné informácie o každom titule v datasete (titul môže predstavovať napr.: jeden film alebo seriál);
 - `title.crew.tsv.gz` (10 miliónov záznamov, 73 MB): informácie o filmových a televíznych tvorcoch, konkrétne o režiséroch (`directors`) a scenáristoch (`writers`);
 - `title.episode.tsv.gz` (8 miliónov záznamov, 47 MB): týka sa epizód seriálov; prepája epizódy (tituly) so seriálom, ktorého sú súčasťou (t. j. s nadradeným titulom);
@@ -197,6 +197,175 @@ Pôvodný dátový model v podobe surových TSV dát som transformoval na hviezd
   - `language` - jazyk;
   - `types` - atribúty pre konkrétny titul (napr. `dvd`, a podobne);
   - **SCD typ:** `SCD Type 1`;
+
+### Načítanie údajov do hviezdicovej schémy
+
+Vytvorím si schému pre moju tabuľku faktov a dimenzie:
+
+```sql
+CREATE SCHEMA IF NOT EXISTS HEDGEHOG_IMDB.star;
+USE SCHEMA HEDGEHOG_IMDB.star;
+```
+
+Následne importujem zo `staging` do `star` schémy dimenzie času - teda, všetky dátumy ktoré sa nachádzajú v datasete:
+
+```sql
+CREATE OR REPLACE TABLE dim_date AS
+SELECT
+    ROW_NUMBER() OVER (ORDER BY date) AS dim_date_id, -- vygenerovanie číselného identifikátora pre každý dátum, zoradený podľa dátumu
+    date,
+    -- `EXTRACT` je to isté ako funkcie `DAY()`, `MONTH()`, `YEAR()`...:
+    EXTRACT(DAY FROM date) AS day, -- deň
+    EXTRACT(MONTH FROM date) AS month, -- mesiac
+    EXTRACT(YEAR FROM date) AS year, -- rok
+    EXTRACT(QUARTER FROM date) AS quarter, -- kvartál
+    FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100 AS decade, -- desaťročie (ako číslo)
+    FLOOR(EXTRACT(YEAR FROM date) / 100) + 1 AS century, -- storočie (ako číslo)
+    TO_CHAR(date, 'Mon') AS monthStr, -- konverzia na textový tvar mesiaca
+    CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100, 's') AS decadeStr, -- desaťročie (ako VARCHAR)
+    CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 100) + 1, '. century') AS centuryStr -- storočie (ako VARCHAR)
+FROM ( -- spojenie všetkých dátumov z datasetu
+    SELECT DISTINCT TO_DATE(timestamp) AS date FROM staging.title_ratings
+    UNION
+    SELECT DISTINCT startDate AS date FROM staging.title_basics
+    UNION
+    SELECT DISTINCT endDate AS date FROM staging.title_basics
+);
+```
+
+Importujem aj časové údaje:
+
+```sql
+CREATE OR REPLACE TABLE dim_time AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY timestamp) AS dim_time_id,
+    TO_TIME(timestamp) AS time,
+    EXTRACT(HOUR FROM timestamp) AS hour,
+    EXTRACT(MINUTE FROM timestamp) AS minute
+FROM staging.title_ratings;
+```
+
+Počas tvorby dimenzie `dim_titles` importujem iba tie tituly, ktoré sú buď filmy alebo seriály (pretože v datasete sa nachádzajú aj rôzne krátke tituly alebo trailere a podobne). Zároveň ma zaujímajú aj informácie o konkrétnej epizóde, iba pokiaľ o nej existuje záznam v datasete, a táto epizóda patrí do určitého seriálu (sem-tam sa môže vyskytnúť aj situácia, že epizódy nemajú seriál do ktorého patria - takéto záznamy nebudem brať do úvahy).
+
+Tituly importujem pomocou dotazu:
+
+```sql
+CREATE OR REPLACE TABLE dim_titles AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY tb.tconst) AS dim_title_id,
+    tb.tconst,
+    tb.titleType,
+    tb.originalTitle,
+    tb.genres,
+    CASE
+        WHEN tb.isAdult THEN '18+'
+        ELSE 'PG'
+    END AS rating, -- ohodnotenie filmu (či je `PG` alebo `18+` - t. j. konverzia BOOLEAN na VARCHAR)
+    CASE 
+        WHEN te.tconst IS NOT NULL THEN 'S' || te.seasonNumber || 'E' || te.episodeNumber
+        ELSE NULL
+    END AS episodeTitle, -- názov epizódy seriálu (`NULL` ak sa nejedná o seriál, t. j. nemáme JOIN pre epizódu)
+    CASE 
+        WHEN te.tconst IS NOT NULL THEN parent_tb.originalTitle
+        ELSE NULL
+    END AS seriesTitle -- názov seriálu z ktorého epizóda pochádza (opäť `NULL` ak sa nejedná o seriál)
+FROM staging.title_basics tb
+LEFT JOIN staging.title_episode te ON te.tconst = tb.tconst -- LEFT JOIN pre epizódu seriálu - nie každý titul patrí do seriálu
+LEFT JOIN staging.title_basics parent_tb ON parent_tb.tconst = te.parentTconst -- LEFT JOIN pre seriál
+WHERE tb.titleType
+    IN ('movie', 'tvSeries') OR -- len filmy a seriály
+    (tb.titleType = 'tvEpisode' AND te.tconst IS NOT NULL); -- alebo epizódy seriálov, ak existuje v tabuľke `title_episode`
+```
+
+Následne importujem mená:
+
+```sql
+CREATE OR REPLACE TABLE dim_names AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY nconst) AS dim_name_id,
+    nconst,
+    primaryName,
+    CAST(birthYear AS VARCHAR(5)) AS birthYear,
+    CAST(deathYear AS VARCHAR(5)) AS deathYear,
+    primaryProfession
+FROM staging.name_basics;
+```
+
+A spojovaciu tabuľku pre mená a tituly:
+
+```sql
+CREATE OR REPLACE TABLE dim_title_names AS
+SELECT DISTINCT
+    -- spojenie cez ID, nie cez originálne konštanty
+    dn.dim_name_id,
+    dt.dim_title_id
+FROM (
+    SELECT nb.nconst, TRIM(title.value) AS tconst -- `title.value` predstavuje `tconst`, ktorý očistím od prípadných bielych znakov
+    FROM staging.name_basics nb, -- `knownForTitles` je pole typu `VARCHAR`, ale obsahuje `tconst` oddelené čiarkami
+         LATERAL FLATTEN(INPUT => SPLIT(nb.knownForTitles, ',')) title -- oddelí `knownForTitles` na jednotlivé tituly podľa čiarky, do "podtabuľky" `title` - to znamená, že bude existovať viacero hodnôt `nb.nconst` ktoré budú obsahovať jednotlivé `tconst` titulov
+) par -- "pár" je v tomto prípade dvojica `nconst` a `tconst`
+JOIN dim_names dn ON dn.nconst = par.nconst
+JOIN dim_titles dt ON dt.tconst = par.tconst;
+```
+
+Pre alternatívne názvy titulov:
+
+```sql
+CREATE OR REPLACE TABLE dim_akas AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY titleId) AS dim_akas_id,
+    titleId,
+    title,
+    region,
+    language,
+    types
+FROM staging.title_akas;
+```
+
+Napokon, pre faktovú tabuľku o hodnoteniach, kde iba všetko spojím:
+
+```sql
+CREATE OR REPLACE TABLE fact_ratings AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY ratings.timestamp) AS fact_rating_id,
+    ratings.rating,
+    staging.title_basics.runtimeMinutes AS titleRuntimeMinutes,
+    CASE 
+        WHEN staging.title_basics.titleType = 'tvEpisode' THEN staging.title_episode.episodeNumber
+        ELSE NULL
+    END AS episodeNumber, -- epizóda, ak sa jedná o seriál
+    CASE 
+        WHEN staging.title_basics.titleType = 'tvEpisode' THEN staging.title_episode.seasonNumber
+        ELSE NULL
+    END AS seasonNumber, -- číslo sezóny, ak sa jedná o seriál
+    dim_titles.dim_title_id, -- ID titulu
+    dim_titleStartDate.dim_date_id AS dim_titleStartDate_id, -- ID dátumu začiatku vydania titulu
+    dim_titleEndDate.dim_date_id AS dim_titleEndDate_id, -- ID dátumu ukončenia vydania titulu
+    dim_postedTime.dim_time_id AS dim_postedTime_id, -- ID času, kedy bolo hodnotenie zverejnené
+    dim_postedDate.dim_date_id AS dim_postedDate_id -- ID dátumu, kedy bolo hodnotenie zverejnené
+FROM staging.title_ratings AS ratings
+LEFT JOIN staging.title_episode ON ratings.tconst = title_episode.tconst -- LEFT JOIN, nie každý titul je epizódou
+JOIN staging.title_principals ON ratings.tconst = title_principals.tconst
+JOIN staging.title_basics ON ratings.tconst = staging.title_basics.tconst
+JOIN dim_titles ON ratings.tconst = dim_titles.tconst
+JOIN dim_time dim_postedTime ON TO_TIME(ratings.timestamp) = dim_postedTime.time
+JOIN dim_date dim_postedDate ON TO_DATE(ratings.timestamp) = dim_postedDate.date
+JOIN dim_date dim_titleStartDate ON staging.title_basics.startDate = dim_titleStartDate.date
+LEFT JOIN dim_date dim_titleEndDate ON staging.title_basics.endDate = dim_titleEndDate.date -- nie každý titul má koniec (napr. existujú seriály, čo ešte stále bežia alebo je titul jednoducho film)
+WHERE staging.title_basics.runtimeMinutes IS NOT NULL; -- pre vynechanie prípadov, kde by nebol údaj o dĺžke filmu
+```
+
+Ako poslednú vec v ELT procese iba vymažem `staging` tabuľky, ktoré už nebudem potrebovať, aby zbytočne nezaberali úložný priestor na serveri:
+
+```sql
+DROP TABLE IF EXISTS staging.title_basics;
+DROP TABLE IF EXISTS staging.title_akas;
+DROP TABLE IF EXISTS staging.title_crew;
+DROP TABLE IF EXISTS staging.title_episode;
+DROP TABLE IF EXISTS staging.title_principals;
+DROP TABLE IF EXISTS staging.title_ratings;
+DROP TABLE IF EXISTS staging.name_basics;
+```
 
 ## Vizualizácia
 
