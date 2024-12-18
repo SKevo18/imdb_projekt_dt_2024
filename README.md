@@ -167,12 +167,36 @@ Pôvodný dátový model v podobe surových TSV dát som transformoval na hviezd
 <p><b>Obrázok 2:</b> <a href="ostatne/star_schema.mwb">ERD diagram</a> hviezdicovej schémy</p>
 </div>
 
-- `fact_ratings` - jedná sa o moju tabuľku faktov, obsahuje informácie o hodnoteniach jednotlivých titulov, teda hlavnú tabuľku ktorú budem skúmať;
+- `fact_ratings` - jedná sa o moju tabuľku faktov, obsahuje informácie o hodnoteniach jednotlivých titulov, teda hlavnú tabuľku ktorú budem skúmať:
+  - `rating` - desatinné číslo od `0` do `10` ktoré predstavuje hodnotenie titulu od používateľa;
+  - `titleRuntimeMinutes` - celé číslo ktoré predstavuje dĺžku titulu v minútach;
+  - **SCD typ:** `SCD Type 1`;
 - `dim_date`, `dim_time` - tabuľka dimenzií, ktorá obsahuje informácie o dátume a čase, kedy sa hodnotenie používateľa zaznamenalo alebo kedy sa vydal nejaký titul;
-- `dim_titles` - tabuľka dimenzií, ktorá obsahuje informácie o tituloch, ktoré sa v datasete nachádzajú;
-- `dim_names` - informácie o menách hercov, režisérov, scenáristov, atď.;
+  - **SCD typ:** `SCD Type 0`;
+- `dim_titles` - tabuľka dimenzií, ktorá obsahuje dodatočné informácie o hodnotených tituloch, ktoré sa v datasete nachádzajú:
+  - `tconst` - originálny identifikátor titulu;
+  - `titleType` - typ titulu (film, seriál, atď.);
+  - `originalTitle` - originálny názov titulu;
+  - `genres` - žánre titulu;
+  - `rating` - ohodnotenie filmu (či je `PG` alebo `18+`);
+  - `episodeTitle` - názov epizódy seriálu (`NULL` ak sa nejedná o seriál);
+  - `seriesTitle` - názov seriálu z ktorého epizóda pochádza (`NULL` ak sa nejedná o seriál);
+  - **SCD typ:** `SCD Type 1`;
+- `dim_names` - informácie o menách hercov, režisérov, scenáristov, atď., súvisia s hodnotenými titulami:
+  - `nconst` - originálny identifikátor osoby;
+  - `primaryName` - názov osoby;
+  - `birthYear` - rok narodenia osoby;
+  - `deathYear` - rok úmrtia osoby;
+  - `primaryProfession` - hlavné povolanie/funkcia;
+  - **SCD typ:** `SCD Type 1`;
 - `dim_title_names` - prepojenie vzťahom `M:N` medzi tabuľkami `dim_titles` a `dim_names`;
-- `dim_akas` - informácie o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov;
+- `dim_akas` - informácie o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov - užitočné, ak chcem analyzovať hodnotenia titulov podľa rôznych krajín:
+  - `titleId` - originálny identifikátor titulu (`tconst`);
+  - `title` - názov titulu v danej krajine;
+  - `region` - kód krajiny;
+  - `language` - jazyk;
+  - `types` - atribúty pre konkrétny titul (napr. `dvd`, a podobne);
+  - **SCD typ:** `SCD Type 1`;
 
 ## Vizualizácia
 
@@ -321,7 +345,7 @@ LIMIT 1;
 
 ![Režiséri s najlepším priemerným hodnotením filmov a počet hlasov](obrazky/7.png)
 
-Graf zobrazuje režisérov filmov, ktorý majú najväčší počet hlasov a zároveň majú ich filmy najlepšie hodnotenie. Víťazom v tomto rebríčku je režisér "Manpreet Singh" s počtom hlasov `5 030` a priemerným hodnotením `6.55`.
+Graf zobrazuje režisérov filmov, ktorý majú najväčší počet hlasov a zároveň majú ich filmy najlepšie hodnotenie. Víťazom v tomto rebríčku je režisér "Manpreet Singh" s počtom hlasov `5 030` a priemerným hodnotením `6.55`. 
 
 SQL dotaz pre vygenerovanie grafu:
 
