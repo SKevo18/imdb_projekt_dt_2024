@@ -207,43 +207,59 @@ CREATE SCHEMA IF NOT EXISTS HEDGEHOG_IMDB.star;
 USE SCHEMA HEDGEHOG_IMDB.star;
 ```
 
-Následne importujem zo `staging` do `star` schémy dimenzie času - teda, všetky dátumy ktoré sa nachádzajú v datasete:
+Následne importujem zo `staging` do `star` schémy dimenzie času, napr.: pre dimenziu `dim_postedDate` je to nasledovný dotaz:
 
 ```sql
-CREATE OR REPLACE TABLE dim_date AS
-SELECT
-    ROW_NUMBER() OVER (ORDER BY date) AS dim_date_id, -- vygenerovanie číselného identifikátora pre každý dátum, zoradený podľa dátumu
+CREATE OR REPLACE TABLE dim_postedDate AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY date) AS dim_postedDate_id, -- ID pre každý záznam, zoradené podľa dátumu
     date,
-    -- `EXTRACT` je to isté ako funkcie `DAY()`, `MONTH()`, `YEAR()`...:
     EXTRACT(DAY FROM date) AS day, -- deň
     EXTRACT(MONTH FROM date) AS month, -- mesiac
     EXTRACT(YEAR FROM date) AS year, -- rok
-    EXTRACT(QUARTER FROM date) AS quarter, -- kvartál
-    FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100 AS decade, -- desaťročie (ako číslo)
-    FLOOR(EXTRACT(YEAR FROM date) / 100) + 1 AS century, -- storočie (ako číslo)
-    TO_CHAR(date, 'Mon') AS monthStr, -- konverzia na textový tvar mesiaca
-    CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100, 's') AS decadeStr, -- desaťročie (ako VARCHAR)
-    CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 100) + 1, '. century') AS centuryStr -- storočie (ako VARCHAR)
-FROM ( -- spojenie všetkých dátumov z datasetu
-    SELECT DISTINCT TO_DATE(timestamp) AS date FROM staging.title_ratings
-    UNION
-    SELECT DISTINCT startDate AS date FROM staging.title_basics
-    UNION
-    SELECT DISTINCT endDate AS date FROM staging.title_basics
+    EXTRACT(QUARTER FROM date) AS quarter, -- kvartál/štvrťrok
+    TO_CHAR(date, 'Mon') AS monthStr, -- skratka mesiaca
+FROM (
+    SELECT DISTINCT TO_DATE(timestamp) AS date FROM staging.title_ratings -- konverzia časového údaju na dátum vykonám v poddotaze, aby som mohol podľa toho zoradiť výsledky a vytvoriť jedinečné ID hodnoty
 );
 ```
 
-Importujem aj časové údaje:
+Podobným spôsobom importujem aj časové údaje o tom, kedy sa hodnotenia zverejnili:
 
 ```sql
-CREATE OR REPLACE TABLE dim_time AS
+CREATE OR REPLACE TABLE dim_postedTime AS
 SELECT DISTINCT
-    ROW_NUMBER() OVER (ORDER BY timestamp) AS dim_time_id,
-    TO_TIME(timestamp) AS time,
-    EXTRACT(HOUR FROM timestamp) AS hour,
-    EXTRACT(MINUTE FROM timestamp) AS minute
-FROM staging.title_ratings;
+    ROW_NUMBER() OVER (ORDER BY time) AS dim_postedTime_id,
+    time,
+    EXTRACT(HOUR FROM time) AS hour,
+    EXTRACT(MINUTE FROM time) AS minute
+FROM (
+    SELECT DISTINCT TO_TIME(timestamp) AS time FROM staging.title_ratings
+);
 ```
+
+Pre schému dimenzie `dim_titleStartDate` som zvolil detailnejšie informácie o dátume vydania titulu, keďže niektoré informácie o tituloch siahajú niekoľko desaťročí do minulosti, preto sa môžu hodiť pre detailnejšiu analýzu faktovej tabuľky:
+
+```sql
+CREATE OR REPLACE TABLE dim_titleStartDate AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY date) AS dim_titleStartDate_id,
+    date,
+    EXTRACT(DAY FROM date) AS day,
+    EXTRACT(MONTH FROM date) AS month,
+    EXTRACT(YEAR FROM date) AS year,
+    EXTRACT(QUARTER FROM date) AS quarter,
+    FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100 AS decade,
+    FLOOR(EXTRACT(YEAR FROM date) / 100) + 1 AS century,
+    TO_CHAR(date, 'Mon') AS monthStr,
+    CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100, 's') AS decadeStr,
+    CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 100) + 1, '. century') AS centuryStr
+FROM (
+    SELECT DISTINCT startDate AS date FROM staging.title_basics
+);
+```
+
+Atribút `endDate` som sa rozhodol neimportovať do samostatnej dimenzie, nakoľko by schéma bola zbytočne komplexnejšia a menej prehľadná, a v mojich dashboardoch informáciu o skončení určitého seriálu ani nevyužijem.
 
 Počas tvorby dimenzie `dim_titles` importujem iba tie tituly, ktoré sú buď filmy alebo seriály (pretože v datasete sa nachádzajú aj rôzne krátke tituly alebo trailere a podobne). Zároveň ma zaujímajú aj informácie o konkrétnej epizóde, iba pokiaľ o nej existuje záznam v datasete, a táto epizóda patrí do určitého seriálu (sem-tam sa môže vyskytnúť aj situácia, že epizódy nemajú seriál do ktorého patria - takéto záznamy nebudem brať do úvahy).
 
@@ -260,7 +276,7 @@ SELECT DISTINCT
     CASE
         WHEN tb.isAdult THEN '18+'
         ELSE 'PG'
-    END AS rating, -- ohodnotenie filmu (či je `PG` alebo `18+` - t. j. konverzia BOOLEAN na VARCHAR)
+    END AS rating, -- ohodnotenie filmu (t. j. či je `PG` alebo `18+` - v podstate, konverzia BOOLEAN na VARCHAR)
     CASE 
         WHEN te.tconst IS NOT NULL THEN 'S' || te.seasonNumber || 'E' || te.episodeNumber
         ELSE NULL
@@ -277,7 +293,7 @@ WHERE tb.titleType
     (tb.titleType = 'tvEpisode' AND te.tconst IS NOT NULL); -- alebo epizódy seriálov, ak existuje v tabuľke `title_episode`
 ```
 
-Následne importujem mená:
+Následne importujem mená (hercov, režisérov, a podobne):
 
 ```sql
 CREATE OR REPLACE TABLE dim_names AS
@@ -291,7 +307,7 @@ SELECT DISTINCT
 FROM staging.name_basics;
 ```
 
-A spojovaciu tabuľku pre mená a tituly:
+...a spojovaciu tabuľku pre mená a tituly:
 
 ```sql
 CREATE OR REPLACE TABLE dim_title_names AS
@@ -308,7 +324,7 @@ JOIN dim_names dn ON dn.nconst = par.nconst
 JOIN dim_titles dt ON dt.tconst = par.tconst;
 ```
 
-Pre alternatívne názvy titulov:
+Pre dimenziu alternatívnych názvov titulov je dotaz nasledovný:
 
 ```sql
 CREATE OR REPLACE TABLE dim_akas AS
@@ -322,7 +338,7 @@ SELECT DISTINCT
 FROM staging.title_akas;
 ```
 
-Napokon, pre faktovú tabuľku o hodnoteniach, kde iba všetko spojím:
+Nakoniec, faktová tabuľka o hodnoteniach kde všetko zhrniem:
 
 ```sql
 CREATE OR REPLACE TABLE fact_ratings AS
@@ -339,20 +355,18 @@ SELECT DISTINCT
         ELSE NULL
     END AS seasonNumber, -- číslo sezóny, ak sa jedná o seriál
     dim_titles.dim_title_id, -- ID titulu
-    dim_titleStartDate.dim_date_id AS dim_titleStartDate_id, -- ID dátumu začiatku vydania titulu
-    dim_titleEndDate.dim_date_id AS dim_titleEndDate_id, -- ID dátumu ukončenia vydania titulu
-    dim_postedTime.dim_time_id AS dim_postedTime_id, -- ID času, kedy bolo hodnotenie zverejnené
-    dim_postedDate.dim_date_id AS dim_postedDate_id -- ID dátumu, kedy bolo hodnotenie zverejnené
+    dim_postedTime.dim_postedTime_id, -- čas zverejnenia hodnotenia
+    dim_postedDate.dim_postedDate_id, -- dátum zverejnenia hodnotenia
+    dim_titleStartDate.dim_titleStartDate_id, -- dátum vydania titulu
 FROM staging.title_ratings AS ratings
-LEFT JOIN staging.title_episode ON ratings.tconst = title_episode.tconst -- LEFT JOIN, nie každý titul je epizódou
+LEFT JOIN staging.title_episode ON ratings.tconst = title_episode.tconst -- epizódy majú iba seriály, nie napr. filmy
 JOIN staging.title_principals ON ratings.tconst = title_principals.tconst
 JOIN staging.title_basics ON ratings.tconst = staging.title_basics.tconst
 JOIN dim_titles ON ratings.tconst = dim_titles.tconst
-JOIN dim_time dim_postedTime ON TO_TIME(ratings.timestamp) = dim_postedTime.time
-JOIN dim_date dim_postedDate ON TO_DATE(ratings.timestamp) = dim_postedDate.date
-JOIN dim_date dim_titleStartDate ON staging.title_basics.startDate = dim_titleStartDate.date
-LEFT JOIN dim_date dim_titleEndDate ON staging.title_basics.endDate = dim_titleEndDate.date -- nie každý titul má koniec (napr. existujú seriály, čo ešte stále bežia alebo je titul jednoducho film)
-WHERE staging.title_basics.runtimeMinutes IS NOT NULL; -- pre vynechanie prípadov, kde by nebol údaj o dĺžke filmu
+JOIN dim_postedTime ON TO_TIME(ratings.timestamp) = dim_postedTime.time
+JOIN dim_postedDate ON TO_DATE(ratings.timestamp) = dim_postedDate.date
+JOIN dim_titleStartDate ON staging.title_basics.startDate = dim_titleStartDate.date
+WHERE staging.title_basics.runtimeMinutes IS NOT NULL; -- pre vynechanie prípadov, kde by v datasete nebol údaj o dĺžke filmu - takéto údaje považujem za neúplné a nechcem ich v datasete zahrnúť
 ```
 
 Ako poslednú vec v ELT procese iba vymažem `staging` tabuľky, ktoré už nebudem potrebovať, aby zbytočne nezaberali úložný priestor na serveri:
@@ -385,8 +399,8 @@ SELECT
     dim_titleStartDate.year AS "Rok vydania titulov"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_date dim_postedDate ON fact_ratings.dim_postedDate_id = dim_postedDate.dim_date_id
-JOIN dim_date dim_titleStartDate ON fact_ratings.dim_titleStartDate_id = dim_titleStartDate.dim_date_id
+JOIN dim_postedDate ON fact_ratings.dim_postedDate_id = dim_postedDate.dim_postedDate_id
+JOIN dim_titleStartDate ON fact_ratings.dim_titleStartDate_id = dim_titleStartDate.dim_titleStartDate_id
 WHERE "Rok vydania titulov" <= 2024
 GROUP BY "Rok vydania titulov"
 ORDER BY "Priemerné hodnotenie" DESC;
@@ -406,7 +420,7 @@ SELECT dim_postedTime.hour AS "Hodina",
 FROM (
     SELECT dim_postedTime.hour, COUNT(fact_ratings.rating) AS za_hodinu
     FROM fact_ratings
-    JOIN dim_time dim_postedTime ON fact_ratings.dim_postedTime_id = dim_postedTime.dim_time_id
+    JOIN dim_postedTime ON fact_ratings.dim_postedTime_id = dim_postedTime.dim_postedTime_id
     GROUP BY dim_postedTime.hour, dim_postedTime.minute
 ) dim_postedTime
 GROUP BY hour
@@ -429,7 +443,7 @@ SELECT
     ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_akas ON dim_titles.tconst = dim_akas.titleId
+JOIN dim_akas ON dim_akas.fact_rating_id = fact_ratings.fact_rating_id
 WHERE
     dim_titles.titleType = 'tvSeries' AND
     dim_akas.region = 'SK' AND

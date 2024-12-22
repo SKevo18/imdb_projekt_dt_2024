@@ -4,8 +4,8 @@ SELECT
     dim_titleStartDate.year AS "Rok vydania titulov"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_date dim_postedDate ON fact_ratings.dim_postedDate_id = dim_postedDate.dim_date_id
-JOIN dim_date dim_titleStartDate ON fact_ratings.dim_titleStartDate_id = dim_titleStartDate.dim_date_id
+JOIN dim_postedDate ON fact_ratings.dim_postedDate_id = dim_postedDate.dim_postedDate_id
+JOIN dim_titleStartDate ON fact_ratings.dim_titleStartDate_id = dim_titleStartDate.dim_titleStartDate_id
 WHERE "Rok vydania titulov" <= 2024
 GROUP BY "Rok vydania titulov"
 ORDER BY "Priemerné hodnotenie" DESC;
@@ -16,7 +16,7 @@ SELECT dim_postedTime.hour AS "Hodina",
 FROM (
     SELECT dim_postedTime.hour, COUNT(fact_ratings.rating) AS za_hodinu
     FROM fact_ratings
-    JOIN dim_time dim_postedTime ON fact_ratings.dim_postedTime_id = dim_postedTime.dim_time_id
+    JOIN dim_postedTime ON fact_ratings.dim_postedTime_id = dim_postedTime.dim_postedTime_id
     GROUP BY dim_postedTime.hour, dim_postedTime.minute
 ) dim_postedTime
 GROUP BY hour
@@ -28,7 +28,7 @@ SELECT
     ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_akas ON dim_titles.tconst = dim_akas.titleId
+JOIN dim_akas ON dim_akas.fact_rating_id = fact_ratings.fact_rating_id
 WHERE
     dim_titles.titleType = 'tvSeries' AND
     dim_akas.region = 'SK' AND

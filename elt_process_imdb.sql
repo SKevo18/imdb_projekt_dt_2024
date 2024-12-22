@@ -163,9 +163,32 @@ imdb_stage/name.basics.tsv.gz	LOADED	14001033	14001033	1	           0
 CREATE SCHEMA IF NOT EXISTS HEDGEHOG_IMDB.star;
 USE SCHEMA HEDGEHOG_IMDB.star;
 
-CREATE OR REPLACE TABLE dim_date AS
-SELECT
-    ROW_NUMBER() OVER (ORDER BY date) AS dim_date_id,
+CREATE OR REPLACE TABLE dim_postedDate AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY date) AS dim_postedDate_id,
+    date,
+    EXTRACT(DAY FROM date) AS day,
+    EXTRACT(MONTH FROM date) AS month,
+    EXTRACT(YEAR FROM date) AS year,
+    EXTRACT(QUARTER FROM date) AS quarter,
+    TO_CHAR(date, 'Mon') AS monthStr,
+FROM (
+    SELECT DISTINCT TO_DATE(timestamp) AS date FROM staging.title_ratings
+);
+
+CREATE OR REPLACE TABLE dim_postedTime AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY time) AS dim_postedTime_id,
+    time,
+    EXTRACT(HOUR FROM time) AS hour,
+    EXTRACT(MINUTE FROM time) AS minute
+FROM (
+    SELECT DISTINCT TO_TIME(timestamp) AS time FROM staging.title_ratings
+);
+
+CREATE OR REPLACE TABLE dim_titleStartDate AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY date) AS dim_titleStartDate_id,
     date,
     EXTRACT(DAY FROM date) AS day,
     EXTRACT(MONTH FROM date) AS month,
@@ -177,20 +200,8 @@ SELECT
     CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 10) * 10 % 100, 's') AS decadeStr,
     CONCAT(FLOOR(EXTRACT(YEAR FROM date) / 100) + 1, '. century') AS centuryStr
 FROM (
-    SELECT DISTINCT TO_DATE(timestamp) AS date FROM staging.title_ratings
-    UNION
     SELECT DISTINCT startDate AS date FROM staging.title_basics
-    UNION
-    SELECT DISTINCT endDate AS date FROM staging.title_basics
 );
-
-CREATE OR REPLACE TABLE dim_time AS
-SELECT DISTINCT
-    ROW_NUMBER() OVER (ORDER BY timestamp) AS dim_time_id,
-    TO_TIME(timestamp) AS time,
-    EXTRACT(HOUR FROM timestamp) AS hour,
-    EXTRACT(MINUTE FROM timestamp) AS minute
-FROM staging.title_ratings;
 
 CREATE OR REPLACE TABLE dim_titles AS
 SELECT DISTINCT
@@ -240,16 +251,6 @@ FROM (
 JOIN dim_names dn ON dn.nconst = par.nconst
 JOIN dim_titles dt ON dt.tconst = par.tconst;
 
-CREATE OR REPLACE TABLE dim_akas AS
-SELECT DISTINCT
-    ROW_NUMBER() OVER (ORDER BY titleId) AS dim_akas_id,
-    titleId,
-    title,
-    region,
-    language,
-    types
-FROM staging.title_akas;
-
 CREATE OR REPLACE TABLE fact_ratings AS
 SELECT DISTINCT
     ROW_NUMBER() OVER (ORDER BY ratings.timestamp) AS fact_rating_id,
@@ -264,20 +265,31 @@ SELECT DISTINCT
         ELSE NULL
     END AS seasonNumber,
     dim_titles.dim_title_id,
-    dim_titleStartDate.dim_date_id AS dim_titleStartDate_id,
-    dim_titleEndDate.dim_date_id AS dim_titleEndDate_id,
-    dim_postedTime.dim_time_id AS dim_postedTime_id,
-    dim_postedDate.dim_date_id AS dim_postedDate_id
+    dim_postedTime.dim_postedTime_id,
+    dim_postedDate.dim_postedDate_id,
+    dim_titleStartDate.dim_titleStartDate_id,
 FROM staging.title_ratings AS ratings
 LEFT JOIN staging.title_episode ON ratings.tconst = title_episode.tconst
 JOIN staging.title_principals ON ratings.tconst = title_principals.tconst
 JOIN staging.title_basics ON ratings.tconst = staging.title_basics.tconst
 JOIN dim_titles ON ratings.tconst = dim_titles.tconst
-JOIN dim_time dim_postedTime ON TO_TIME(ratings.timestamp) = dim_postedTime.time
-JOIN dim_date dim_postedDate ON TO_DATE(ratings.timestamp) = dim_postedDate.date
-JOIN dim_date dim_titleStartDate ON staging.title_basics.startDate = dim_titleStartDate.date
-LEFT JOIN dim_date dim_titleEndDate ON staging.title_basics.endDate = dim_titleEndDate.date
+JOIN dim_postedTime ON TO_TIME(ratings.timestamp) = dim_postedTime.time
+JOIN dim_postedDate ON TO_DATE(ratings.timestamp) = dim_postedDate.date
+JOIN dim_titleStartDate ON staging.title_basics.startDate = dim_titleStartDate.date
 WHERE staging.title_basics.runtimeMinutes IS NOT NULL;
+
+CREATE OR REPLACE TABLE dim_akas AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY titleId) AS dim_akas_id,
+    title,
+    region,
+    language,
+    types,
+    fact_ratings.fact_rating_id
+FROM staging.title_akas
+LEFT JOIN dim_titles ON staging.title_akas.titleId = dim_titles.tconst
+LEFT JOIN fact_ratings ON dim_titles.dim_title_id = fact_ratings.dim_title_id
+WHERE fact_ratings.fact_rating_id IS NOT NULL;
 
 DROP TABLE IF EXISTS staging.title_basics;
 DROP TABLE IF EXISTS staging.title_akas;
