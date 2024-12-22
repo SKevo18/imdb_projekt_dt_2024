@@ -528,7 +528,7 @@ LIMIT 1;
 
 ![Režiséri s najlepším priemerným hodnotením filmov a počet hlasov](obrazky/7.png)
 
-Graf zobrazuje režisérov filmov, ktorý majú najväčší počet hlasov a zároveň majú ich filmy najlepšie hodnotenie. Víťazom v tomto rebríčku je režisér "Manpreet Singh" s počtom hlasov `5 030` a priemerným hodnotením `6.55`. 
+Graf zobrazuje režisérov filmov, ktorý majú najväčší počet hlasov a zároveň majú ich filmy najlepšie hodnotenie. Víťazom v tomto rebríčku je režisér "Manpreet Singh" s počtom hlasov `5 030` a priemerným hodnotením `6.55`.
 
 SQL dotaz pre vygenerovanie grafu:
 
