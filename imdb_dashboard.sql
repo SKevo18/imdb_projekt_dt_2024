@@ -28,7 +28,8 @@ SELECT
     ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_akas ON dim_akas.fact_rating_id = fact_ratings.fact_rating_id
+JOIN bridge_title_akas ON dim_titles.dim_title_id = bridge_title_akas.dim_title_id
+JOIN dim_akas ON dim_akas.dim_akas_id = bridge_title_akas.dim_akas_id
 WHERE
     dim_titles.titleType = 'tvSeries' AND
     dim_akas.region = 'SK' AND
@@ -57,8 +58,8 @@ SELECT
     COUNT(dim_titles.dim_title_id) AS "Počet titulov"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
-JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+JOIN bridge_title_names ON dim_titles.dim_title_id = bridge_title_names.dim_title_id
+JOIN dim_names ON bridge_title_names.dim_name_id = dim_names.dim_name_id
 WHERE
     dim_titles.titleType = 'movie' AND
     dim_names.primaryProfession IN ('actor', 'actress')
@@ -84,8 +85,8 @@ SELECT
     ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
     COUNT(fact_ratings.rating) AS "Celkový počet hlasov" FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
-JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+JOIN bridge_title_names ON dim_titles.dim_title_id = bridge_title_names.dim_title_id
+JOIN dim_names ON bridge_title_names.dim_name_id = dim_names.dim_name_id
 WHERE
     dim_names.primaryProfession LIKE '%director%' AND
     dim_titles.titleType = 'movie'

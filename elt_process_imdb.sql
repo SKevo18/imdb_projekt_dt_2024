@@ -229,6 +229,23 @@ WHERE tb.titleType
     IN ('movie', 'tvSeries') OR
     (tb.titleType = 'tvEpisode' AND te.tconst IS NOT NULL);
 
+CREATE OR REPLACE TABLE dim_akas AS
+SELECT DISTINCT
+    ROW_NUMBER() OVER (ORDER BY titleId) AS dim_akas_id,
+    titleId,
+    title,
+    region,
+    language,
+    types,
+FROM staging.title_akas;
+
+CREATE OR REPLACE TABLE bridge_title_akas AS
+SELECT DISTINCT
+    dim_titles.dim_title_id,
+    dim_akas.dim_akas_id
+FROM dim_akas
+JOIN dim_titles ON dim_akas.titleId = dim_titles.tconst;
+
 CREATE OR REPLACE TABLE dim_names AS
 SELECT DISTINCT
     ROW_NUMBER() OVER (ORDER BY nconst) AS dim_name_id,
@@ -239,17 +256,17 @@ SELECT DISTINCT
     primaryProfession
 FROM staging.name_basics;
 
-CREATE OR REPLACE TABLE dim_title_names AS
+CREATE OR REPLACE TABLE bridge_title_names AS
 SELECT DISTINCT
-    dn.dim_name_id,
-    dt.dim_title_id
+    dim_names.dim_name_id,
+    dim_titles.dim_title_id
 FROM (
     SELECT nb.nconst, TRIM(title.value) AS tconst
     FROM staging.name_basics nb,
          LATERAL FLATTEN(INPUT => SPLIT(nb.knownForTitles, ',')) title
 ) par
-JOIN dim_names dn ON dn.nconst = par.nconst
-JOIN dim_titles dt ON dt.tconst = par.tconst;
+JOIN dim_names ON dim_names.nconst = par.nconst
+JOIN dim_titles ON dim_titles.tconst = par.tconst;
 
 CREATE OR REPLACE TABLE fact_ratings AS
 SELECT DISTINCT
@@ -277,19 +294,6 @@ JOIN dim_postedTime ON TO_TIME(ratings.timestamp) = dim_postedTime.time
 JOIN dim_postedDate ON TO_DATE(ratings.timestamp) = dim_postedDate.date
 JOIN dim_titleStartDate ON staging.title_basics.startDate = dim_titleStartDate.date
 WHERE staging.title_basics.runtimeMinutes IS NOT NULL;
-
-CREATE OR REPLACE TABLE dim_akas AS
-SELECT DISTINCT
-    ROW_NUMBER() OVER (ORDER BY titleId) AS dim_akas_id,
-    title,
-    region,
-    language,
-    types,
-    fact_ratings.fact_rating_id
-FROM staging.title_akas
-LEFT JOIN dim_titles ON staging.title_akas.titleId = dim_titles.tconst
-LEFT JOIN fact_ratings ON dim_titles.dim_title_id = fact_ratings.dim_title_id
-WHERE fact_ratings.fact_rating_id IS NOT NULL;
 
 DROP TABLE IF EXISTS staging.title_basics;
 DROP TABLE IF EXISTS staging.title_akas;

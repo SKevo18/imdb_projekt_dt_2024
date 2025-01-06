@@ -189,7 +189,7 @@ Pôvodný dátový model v podobe surových TSV dát som transformoval na hviezd
   - `deathYear` - rok úmrtia osoby;
   - `primaryProfession` - hlavné povolanie/funkcia;
   - **SCD typ:** `SCD Type 1`;
-- `dim_title_names` - prepojenie vzťahom `M:N` medzi tabuľkami `dim_titles` a `dim_names`;
+- `bridge_title_names` - prepojenie vzťahom `M:N` medzi tabuľkami `dim_titles` a `dim_names`;
 - `dim_akas` - informácie o alternatívnych, medzinárodných a lokálnych názvoch titulov, keďže názvy filmov sú obvykle prekladané do viacerých jazykov - užitočné, ak chcem analyzovať hodnotenia titulov podľa rôznych krajín:
   - `titleId` - originálny identifikátor titulu (`tconst`);
   - `title` - názov titulu v danej krajine;
@@ -197,6 +197,7 @@ Pôvodný dátový model v podobe surových TSV dát som transformoval na hviezd
   - `language` - jazyk;
   - `types` - atribúty pre konkrétny titul (napr. `dvd`, a podobne);
   - **SCD typ:** `SCD Type 1`;
+- `bridge_title_akas` - prepojenie vzťahom `M:N` medzi tabuľkami `dim_titles` a `dim_akas`;
 
 ### Načítanie údajov do hviezdicovej schémy
 
@@ -269,7 +270,7 @@ Tituly importujem pomocou dotazu:
 CREATE OR REPLACE TABLE dim_titles AS
 SELECT DISTINCT
     ROW_NUMBER() OVER (ORDER BY tb.tconst) AS dim_title_id,
-    tb.tconst,
+    tb.tconst, -- potrebné pre bridge
     tb.titleType,
     tb.originalTitle,
     tb.genres,
@@ -310,7 +311,7 @@ FROM staging.name_basics;
 ...a spojovaciu tabuľku pre mená a tituly:
 
 ```sql
-CREATE OR REPLACE TABLE dim_title_names AS
+CREATE OR REPLACE TABLE bridge_title_names AS
 SELECT DISTINCT
     -- spojenie cez ID, nie cez originálne konštanty
     dn.dim_name_id,
@@ -330,12 +331,23 @@ Pre dimenziu alternatívnych názvov titulov je dotaz nasledovný:
 CREATE OR REPLACE TABLE dim_akas AS
 SELECT DISTINCT
     ROW_NUMBER() OVER (ORDER BY titleId) AS dim_akas_id,
-    titleId,
+    titleId, -- originálny identifikátor, aby som mohol vytvoriť bridge nižšie
     title,
     region,
     language,
-    types
+    types,
 FROM staging.title_akas;
+```
+
+Spojenie medzi `dim_titles` a `dim_akas`:
+
+```sql
+CREATE OR REPLACE TABLE bridge_title_akas AS
+SELECT DISTINCT
+    dim_titles.dim_title_id,
+    dim_akas.dim_akas_id
+FROM dim_akas
+JOIN dim_titles ON dim_akas.titleId = dim_titles.tconst;
 ```
 
 Nakoniec, faktová tabuľka o hodnoteniach kde všetko zhrniem:
@@ -443,7 +455,8 @@ SELECT
     ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_akas ON dim_akas.fact_rating_id = fact_ratings.fact_rating_id
+JOIN bridge_title_akas ON dim_titles.dim_title_id = bridge_title_akas.dim_title_id
+JOIN dim_akas ON dim_akas.dim_akas_id = bridge_title_akas.dim_akas_id
 WHERE
     dim_titles.titleType = 'tvSeries' AND
     dim_akas.region = 'SK' AND
@@ -493,8 +506,8 @@ SELECT
     COUNT(dim_titles.dim_title_id) AS "Počet titulov"
 FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
-JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+JOIN bridge_title_names ON dim_titles.dim_title_id = bridge_title_names.dim_title_id
+JOIN dim_names ON bridge_title_names.dim_name_id = dim_names.dim_name_id
 WHERE
     dim_titles.titleType = 'movie' AND
     dim_names.primaryProfession IN ('actor', 'actress')
@@ -538,8 +551,8 @@ SELECT
     ROUND(AVG(fact_ratings.rating), 2) AS "Priemerné hodnotenie",
     COUNT(fact_ratings.rating) AS "Celkový počet hlasov" FROM fact_ratings
 JOIN dim_titles ON fact_ratings.dim_title_id = dim_titles.dim_title_id
-JOIN dim_title_names ON dim_titles.dim_title_id = dim_title_names.dim_title_id
-JOIN dim_names ON dim_title_names.dim_name_id = dim_names.dim_name_id
+JOIN bridge_title_names ON dim_titles.dim_title_id = bridge_title_names.dim_title_id
+JOIN dim_names ON bridge_title_names.dim_name_id = dim_names.dim_name_id
 WHERE
     dim_names.primaryProfession LIKE '%director%' AND
     dim_titles.titleType = 'movie'
